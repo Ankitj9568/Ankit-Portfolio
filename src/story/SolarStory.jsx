@@ -167,9 +167,11 @@ function Rig() {
   return null
 }
 
-/* camera-distance + chapter cull: object j only renders within its story window and fog range */
+/* camera-distance + chapter cull: object j only renders within its story window
+   and fog range — window 0.52 keeps exactly one planet in the sky at a time
+   ( neighbour planets blink in only during the short handoff ) */
 const cullV = new THREE.Vector3()
-function useChapterCull(ref, j, maxDist = 44, window = 1.35) {
+function useChapterCull(ref, j, maxDist = 44, window = 0.52) {
   useFrame(({ camera }) => {
     if (!ref.current) return
     const { i, t } = getProgress()
@@ -240,6 +242,31 @@ function Moon({ center }) {
   )
 }
 
+/* small companion moon that revolves around its planet (one per chapter body) */
+function Moonlet({ center, j, dist = 2.6, size = 0.26, speed = 0.5, phase = 0, color = '#9aa3ad', flat = 0.35, lift = 0.4 }) {
+  const ref = useRef()
+  const wrap = useRef()
+  useChapterCull(wrap, j)
+  const texture = loadTex('/textures/2k_moon.jpg')
+  useFrame(({ clock }) => {
+    const a = clock.elapsedTime * speed + phase
+    ref.current.position.set(
+      center[0] + Math.cos(a) * dist,
+      center[1] + lift + Math.sin(a * 0.9 + phase) * flat,
+      center[2] + Math.sin(a) * dist * 0.55,
+    )
+    ref.current.rotation.y += 0.0025
+  })
+  return (
+    <group ref={wrap}>
+      <mesh ref={ref}>
+        <sphereGeometry args={[size, 28, 28]} />
+        <meshStandardMaterial map={texture} color={color} roughness={1} />
+      </mesh>
+    </group>
+  )
+}
+
 /* ── Saturn: realistic ring texture + PROJECT RINGS ── */
 function radialRingGeometry(inner, outer, segs = 160) {
   const g = new THREE.RingGeometry(inner, outer, segs, 1)
@@ -281,6 +308,8 @@ function Saturn({ pos }) {
       </group>
       {/* each project = one glowing orbit arc */}
       <ProjectRings />
+      {/* Titan beyond the ring plane */}
+      <Moonlet center={[0, 0, 0]} j={3} dist={3.9} size={0.28} speed={0.4} phase={2.2} color="#ffb36b" flat={0.3} lift={0.55} />
     </group>
   )
 }
@@ -491,14 +520,26 @@ function HyperDrive({ color, opacity = 0.5 }) {
     const { phase, cover } = warpState()
     const drive = Math.max(phase, travelFx.boost)
     const conv = 1 - cover * 0.62 // streaks funnel into the tunnel
+    // parked at a planet: streaks nearly stop — a few faint, distant, slow lines
+    const rest = 1 - smooth01((drive - 0.05) / 0.2)
     const mat = ref.current.material
-    mat.opacity = opacity + drive * 0.45
+    mat.opacity = opacity * (0.3 + 0.7 * (1 - rest)) + drive * 0.45
     ref.current.position.copy(camera.position)
     streaks.forEach((s, i) => {
-      s.z -= s.v * dt * (1 + drive * 11)
+      s.z -= s.v * dt * (0.22 + drive * 11)
       if (s.z < -6) { s.z = 6 }
-      dummy.position.set(s.x * conv, s.y * conv, s.z)
-      dummy.scale.set(0.012, 0.012, s.len * (0.32 + drive * 2.6))
+      // two thirds of the streaks shrink away when parked; a sparse few remain
+      const dim = i % 3 !== 0 ? 1 - rest * 0.94 : 1
+      dummy.position.set(
+        s.x * (1 + rest * 0.6) * conv,
+        s.y * (1 + rest * 0.6) * conv,
+        s.z,
+      )
+      dummy.scale.set(
+        0.012 * dim,
+        0.012 * dim,
+        s.len * (0.32 + drive * 2.6) * (1 - rest * 0.6) * dim,
+      )
       dummy.updateMatrix()
       ref.current.setMatrixAt(i, dummy.matrix)
     })
