@@ -123,23 +123,26 @@ function Rig() {
   return null
 }
 
-/* camera-distance cull: fully-fogged meshes still occlude stars (black discs) — hide beyond fog far */
+/* camera-distance + chapter cull: object j only renders within its story window and fog range */
 const cullV = new THREE.Vector3()
-function useCull(ref, maxDist = 44) {
+function useChapterCull(ref, j, maxDist = 44, window = 1.35) {
   useFrame(({ camera }) => {
     if (!ref.current) return
+    const { i, t } = getProgress()
     ref.current.getWorldPosition(cullV)
-    ref.current.visible = camera.position.distanceTo(cullV) < maxDist
+    const near = camera.position.distanceTo(cullV) < maxDist
+    const inChapter = Math.abs(i + t - j) < window
+    ref.current.visible = near && inChapter
   })
 }
 
 /* ── realistic textured planet (with optional atmosphere halo) ── */
-function Planet({ url, pos, radius = 1.6, spin = 0.05, tilt = 0, atmo = null, clouds = null }) {
+function Planet({ url, pos, radius = 1.6, spin = 0.05, tilt = 0, atmo = null, clouds = null, j = 0 }) {
   const grp = useRef()
   const cRef = useRef()
   const texture = loadTex(url)
   const cloudTex = clouds ? loadTex(clouds) : null
-  useCull(grp)
+  useChapterCull(grp, j)
   useFrame((_, dt) => {
     grp.current.children[0].rotation.y += dt * spin
     if (cRef.current) cRef.current.rotation.y += dt * spin * 1.35
@@ -170,7 +173,8 @@ function Planet({ url, pos, radius = 1.6, spin = 0.05, tilt = 0, atmo = null, cl
 
 function Moon({ center }) {
   const ref = useRef()
-  useCull(ref, 40)
+  const wrap = useRef()
+  useChapterCull(wrap, 1, 40)
   useFrame(({ clock }) => {
     const a = clock.elapsedTime * 0.35
     // orbit stays behind the planet, so it never drifts in front of your text
@@ -183,10 +187,12 @@ function Moon({ center }) {
   })
   const texture = loadTex('/textures/2k_moon.jpg')
   return (
-    <mesh ref={ref}>
-      <sphereGeometry args={[0.42, 32, 32]} />
-      <meshStandardMaterial map={texture} roughness={1} />
-    </mesh>
+    <group ref={wrap}>
+      <mesh ref={ref}>
+        <sphereGeometry args={[0.42, 32, 32]} />
+        <meshStandardMaterial map={texture} roughness={1} />
+      </mesh>
+    </group>
   )
 }
 
@@ -209,7 +215,7 @@ const RING_TILT = [-Math.PI / 2.35, 0, 0.18]
 
 function Saturn({ pos }) {
   const grp = useRef()
-  useCull(grp)
+  useChapterCull(grp, 3)
   const texture = loadTex('/textures/2k_saturn_ring_alpha.png')
   return (
     <group ref={grp} position={pos} rotation={[0, -0.5, 0]}>
@@ -476,7 +482,7 @@ function Plate({ j, pos, num, title, sub }) {
 function EarthCameos() {
   const mapS = useFamilyModel('/models/spaceship.glb')
   const grp = useRef()
-  useCull(grp)
+  useChapterCull(grp, 1)
   return (
     <group ref={grp}>
       {/* Fernando the Flamingo wing-ship parked in low Earth orbit, engines warm */}
@@ -500,7 +506,7 @@ function MarsPatrol() {
   const map = useFamilyModel('/models/spaceship.glb')
   const outer = useRef()
   const g = useRef()
-  useCull(outer)
+  useChapterCull(outer, 2)
   useFrame(({ clock }) => {
     const a = clock.elapsedTime * 0.45
     g.current.position.set(
@@ -531,7 +537,7 @@ function FinalGate({ pos }) {
   const mapS = useFamilyModel('/models/spaceship.glb')
   const gate = useRef()
   const wrap = useRef()
-  useCull(wrap)
+  useChapterCull(wrap, 6, 44, 1.15)
   useFrame(({ clock }, dt) => {
     gate.current.rotation.z += dt * 0.55
     gate.current.rotation.x = Math.sin(clock.elapsedTime * 0.4) * 0.28
@@ -661,13 +667,13 @@ export default function SolarStory() {
           <Stars radius={90} depth={40} count={2600} factor={3.6} saturation={0} fade speed={0.4} />
 
           {/* CH·01 Earth — origin (day map + real cloud layer) */}
-          <Planet url="/textures/2k_earth_daymap.jpg" clouds="/textures/2k_earth_clouds.jpg" pos={[-4.6, 0.3, 0]} radius={1.6} atmo="#4d9fff" />
+          <Planet url="/textures/2k_earth_daymap.jpg" clouds="/textures/2k_earth_clouds.jpg" pos={[-4.6, 0.3, 0]} radius={1.6} atmo="#4d9fff" j={1} />
           <Moon center={[-4.6, 0.3, 0]} />
           <Plate j={1} pos={[-4.6, 3.05, 0]} num="CH·01" title="THE HOME PLANET" sub="Kolkata · B.Tech IT · TMSL" />
           <EarthCameos />
 
           {/* CH·02 Mars — the arsenal */}
-          <Planet url="/textures/2k_mars.jpg" pos={[5.0, 0.9, -16]} radius={1.35} spin={0.07} atmo="#ff7a55" />
+          <Planet url="/textures/2k_mars.jpg" pos={[5.0, 0.9, -16]} radius={1.35} spin={0.07} atmo="#ff7a55" j={2} />
           <Plate j={2} pos={[5.0, 2.75, -16]} num="CH·02" title="THE ARSENAL" sub="SQL · PostgreSQL · Node/Express · Java" />
           <MarsPatrol />
 
@@ -676,11 +682,11 @@ export default function SolarStory() {
           <Plate j={3} pos={[-5.4, 3.35, -34]} num="CH·03" title="MISSION DECK" sub="every ring = a shipped project" />
 
           {/* CH·04 Jupiter — storm glory */}
-          <Planet url="/textures/2k_jupiter.jpg" pos={[5.6, -0.4, -56]} radius={2.0} spin={0.06} atmo="#ffc98a" />
+          <Planet url="/textures/2k_jupiter.jpg" pos={[5.6, -0.4, -56]} radius={2.0} spin={0.06} atmo="#ffc98a" j={4} />
           <Plate j={4} pos={[5.6, 2.55, -56]} num="CH·04" title="STORM GLORY" sub="IIT Madras × FedEx Top 15 · India Innovates finalist" />
 
           {/* CH·05 Neptune — the log */}
-          <Planet url="/textures/2k_neptune.jpg" pos={[-4.9, 0.7, -76]} radius={1.35} spin={0.055} atmo="#5f9cff" />
+          <Planet url="/textures/2k_neptune.jpg" pos={[-4.9, 0.7, -76]} radius={1.35} spin={0.055} atmo="#5f9cff" j={5} />
           <Plate j={5} pos={[-4.9, 2.85, -76]} num="CH·05" title="THE LOG" sub="2023 → 2027" />
 
           {/* FINAL gate — mission control */}

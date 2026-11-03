@@ -3,11 +3,13 @@ import { profile } from '../data'
 export default function Footer() {
   return (
     <footer className="footer">
-      <div className="container">
-        <p>
-          Designed & built with <span className="heart">♥</span> by {profile.name} · React + Three.js
+      <div className="container footer-row">
+        <p className="footer-left">© {new Date().getFullYear()} {profile.name}</p>
+        <p className="footer-right">
+          <a href={profile.github} target="_blank" rel="noreferrer">GitHub</a>
+          <a href={profile.linkedin} target="_blank" rel="noreferrer">LinkedIn</a>
+          <a href={`mailto:${profile.email}`}>Email</a>
         </p>
-        <p className="mono">© {new Date().getFullYear()} — exploring the web, one pixel at a time.</p>
       </div>
     </footer>
   )
