@@ -667,7 +667,7 @@ button { font-family: inherit; }
 }
 
 /* one tall act per chapter: room for the camera to settle on each planet */
-.chapter { min-height: 185vh; }
+.chapter { min-height: 245vh; }
 .chapter:first-child { min-height: 0; }
 
 /* on wide screens, content docks opposite its planet */
@@ -789,6 +789,36 @@ button { font-family: inherit; }
   opacity: 0;
   background:
     radial-gradient(circle at 50% 50%, #ffffff 0%, #e7f8ff 34%, #b7e0ff 62%, rgba(159, 205, 255, 0) 100%);
+}
+
+/* the violent purple space-crack that opens inside the white light */
+.warp-crack {
+  position: fixed; inset: 0; z-index: 7;
+  pointer-events: none;
+  opacity: 0;
+}
+.warp-crack svg {
+  width: 100vw; height: 100vh;
+  animation: crack-flicker 0.42s ease-in-out infinite;
+}
+.crack-glow polyline {
+  fill: none; stroke: #a855f7; stroke-width: 7;
+  stroke-linejoin: round; stroke-linecap: round;
+  filter: blur(4px);
+}
+.crack-core polyline {
+  fill: none; stroke: #ffffff; stroke-width: 2.2;
+  stroke-linejoin: round; stroke-linecap: round;
+  filter: blur(0.6px);
+}
+@keyframes crack-flicker {
+  0% { opacity: 0.9; }
+  17% { opacity: 0.45; }
+  31% { opacity: 1; }
+  48% { opacity: 0.6; }
+  64% { opacity: 1; }
+  82% { opacity: 0.5; }
+  100% { opacity: 0.95; }
 }
 
 @media (max-width: 720px) {

@@ -72,7 +72,7 @@ function Atmosphere({ radius = 1, color = '#6ab7ff', scale = 1.055, power = 3, s
 /* warp boost shared with the cursor/chip UX */
 export const warp = { boost: 0 }
 /* warp drive telemetry read by the DOM cockpit (no React re-renders) */
-export const warpFx = { cover: 0, phase: 0, vel: 99.3 }
+export const warpFx = { cover: 0, phase: 0, vel: 99.3, crack: 0 }
 /* travel intensity: spikes while scrolling between chapters, coasts back to slow lines */
 export const travelFx = { boost: 0 }
 const emitHover = (on) =>
@@ -87,7 +87,20 @@ function warpState() {
     phase < 0.72 ? smooth01((phase - 0.28) / 0.44)
     : phase < 0.85 ? 1
     : 1 - smooth01((phase - 0.85) / 0.14)
-  return { phase, cover }
+  return {
+    phase, cover,
+    crack: smooth01((phase - 0.70) / 0.06) * (1 - smooth01((phase - 0.82) / 0.06)),
+  }
+}
+
+/* inter-chapter transit cinematic, driven by the scroll fraction between two
+   chapters: momentum builds → sudden white flash → a purple space-crack opens
+   inside the white → then it fades out right beside the next planet */
+function transitState(tf) {
+  const momentum = smooth01(tf / 0.35) * (1 - smooth01((tf - 0.82) / 0.14))
+  const cover = smooth01((tf - 0.40) / 0.12) * (1 - smooth01((tf - 0.78) / 0.14))
+  const crack = smooth01((tf - 0.54) / 0.08) * (1 - smooth01((tf - 0.72) / 0.07))
+  return { momentum, cover, crack }
 }
 
 /* ── the story: one waypoint per chapter ─────────────────
@@ -113,7 +126,7 @@ function Rig() {
 
   useFrame(({ clock }, dt) => {
     warp.boost = Math.max(0, warp.boost - dt * 0.5)
-    const { phase, cover } = warpState()
+    const { phase, cover, crack } = warpState()
 
     // scroll travel feeds the drive: fast chapter-to-chapter jumps blaze the
     // streaks, then boost decays so each chapter settles into slow drift lines
@@ -121,16 +134,20 @@ function Rig() {
     const storyPos = pr.i + pr.t
     const dStory = Math.abs(storyPos - prevPos.current)
     prevPos.current = storyPos
-    travelFx.boost = clamp01(Math.max(travelFx.boost - dt * 1.3, Math.min(1, dStory * 26)))
 
-    warpFx.cover = cover
+    // scroll-driven transit cinematic between chapters (momentum/crack on top
+    // of the raw velocity, so even a slow scroll runs the full staged sequence)
+    const { momentum, cover: tCover, crack: tCrack } = transitState(pr.t)
+    travelFx.boost = clamp01(Math.max(travelFx.boost - dt * 1.3, dStory * 26, momentum * 0.85))
+
+    warpFx.cover = Math.max(cover, tCover)
     warpFx.phase = phase
+    warpFx.crack = Math.max(tCrack, crack)
     warpFx.vel = 99.3 + phase * 913 + travelFx.boost * 120
 
-    const { i } = getProgress()
-    const A = CHAPTERS[Math.min(i, CHAPTERS.length - 1)]
-    const B = CHAPTERS[Math.min(i + 1, CHAPTERS.length - 1)]
-    const k = smooth(getProgress().t)
+    const A = CHAPTERS[Math.min(pr.i, CHAPTERS.length - 1)]
+    const B = CHAPTERS[Math.min(pr.i + 1, CHAPTERS.length - 1)]
+    const k = smooth(pr.t)
 
     // straight-ahead cockpit flight: the heading is always level and dead ahead
     // (targets sit exactly in front of the camera), so no yaw/roll ever —
@@ -517,11 +534,14 @@ function HyperDrive({ color, opacity = 0.5 }) {
     [],
   )
   useFrame((_, dt) => {
-    const { phase, cover } = warpState()
-    // drive level = strongest of: warp boost (rocket click) or scroll travel.
-    // NOTE: it must be warp.boost, NOT the warp phase — the phase is 1 when
-    // idle, which used to keep the streaks eternally blazing at planets.
-    const drive = Math.max(warp.boost, travelFx.boost)
+    const pr = getProgress()
+    const { momentum, cover: tCover } = transitState(pr.t)
+    const { cover: wCover } = warpState()
+    const cover = Math.max(wCover, tCover)
+    // drive level = strongest of: warp boost (rocket click), scroll velocity,
+    // or the staged transit momentum. It must NOT read the warp phase —
+    // that is 1 when idle, which used to keep streaks eternally blazing.
+    const drive = Math.max(warp.boost, travelFx.boost, momentum * 0.85)
     const conv = 1 - cover * 0.62 // streaks funnel into the tunnel
     // parked at a planet: streaks nearly stop — a few faint, distant, slow lines
     const rest = 1 - smooth01((drive - 0.05) / 0.2)
@@ -783,10 +803,12 @@ function CockpitFrame() {
   const flash = useRef()
   const vel = useRef()
   const mode = useRef()
+  const crackRef = useRef()
   useEffect(() => {
     let raf
     const tick = () => {
       if (flash.current) flash.current.style.opacity = warpFx.cover
+      if (crackRef.current) crackRef.current.style.opacity = Math.min(1, warpFx.crack * 1.8)
       if (vel.current) vel.current.textContent = warpFx.vel.toFixed(1)
       if (mode.current) mode.current.textContent = warpFx.cover > 0.25 ? 'WARP' : 'CRUISE'
       raf = requestAnimationFrame(tick)
@@ -797,6 +819,20 @@ function CockpitFrame() {
   return (
     <>
       <div className="warp-flash" ref={flash} aria-hidden="true" />
+      <div className="warp-crack" ref={crackRef} aria-hidden="true">
+        <svg viewBox="0 0 200 400" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+          <g className="crack-glow">
+            <polyline points="104,0 88,38 118,72 92,110 128,150 96,196 130,240 100,290 122,330 98,400" />
+            <polyline points="92,110 60,142 46,176" />
+            <polyline points="128,150 162,170 176,204" />
+          </g>
+          <g className="crack-core">
+            <polyline points="104,0 88,38 118,72 92,110 128,150 96,196 130,240 100,290 122,330 98,400" />
+            <polyline points="92,110 60,142 46,176" />
+            <polyline points="128,150 162,170 176,204" />
+          </g>
+        </svg>
+      </div>
       <div className="cockpit" aria-hidden="true">
         <i className="ck-corner tl" />
         <i className="ck-corner tr" />
