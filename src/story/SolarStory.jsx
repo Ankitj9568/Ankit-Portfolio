@@ -94,7 +94,7 @@ function warpState() {
    planets alternate screen-side: index odd → planet on the LEFT? no —
    here `side` refers to where the planet sits: 'left' | 'right'            */
 const CHAPTERS = [
-  { id: 'home', pos: [1, 0.5, 11], tgt: [-6.2, 0.35, 2.5] },       // prologue: deep space, Earth frames right
+  { id: 'home', pos: [-7.4, 0.6, 9.6] },                           // prologue: flying straight toward the sun
   { id: 'about', planet: [(-4.6), 0.3, 0], side: 'left' },         // Earth
   { id: 'skills', planet: [5.0, 0.9, -16], side: 'right' },        // Mars
   { id: 'projects', planet: [(-5.4), 0.5, -34], side: 'left' },    // Saturn (rings = projects)
@@ -105,8 +105,8 @@ const CHAPTERS = [
 
 function Rig() {
   const { camera } = useThree()
-  const posRef = useRef(new THREE.Vector3(1, 0.5, 11))
-  const tgtRef = useRef(new THREE.Vector3(-6.2, 0.35, 2.5))
+  const posRef = useRef(new THREE.Vector3(-7.4, 0.6, 9.6))
+  const tgtRef = useRef(new THREE.Vector3(-7.4, 0.6, 3.6))
   const prevPos = useRef(0)
   const p = useMemo(() => new THREE.Vector3(), [])
   const t = useMemo(() => new THREE.Vector3(), [])
@@ -132,13 +132,14 @@ function Rig() {
     const B = CHAPTERS[Math.min(i + 1, CHAPTERS.length - 1)]
     const k = smooth(getProgress().t)
 
+    // straight-ahead cockpit flight: the heading is always level and dead ahead
+    // (targets sit exactly in front of the camera), so no yaw/roll ever —
+    // planets ride the screen-sides purely by placement
     const camOf = (c) => {
-      if (!c.planet) return { pos: c.pos, tgt: c.tgt }
-      const sgn = c.side === 'left' ? 1 : -1
-      return {
-        pos: [c.planet[0] - sgn * 1.4, c.planet[1] + 0.35, c.planet[2] + 7.4],
-        tgt: [c.planet[0] + sgn * 1.5, c.planet[1], c.planet[2] - 0.4],
-      }
+      if (!c.planet) return { pos: c.pos, tgt: [c.pos[0], c.pos[1], c.pos[2] - 6] }
+      const px = c.planet[0] * 0.3
+      const py = c.planet[1] + 0.15
+      return { pos: [px, py, c.planet[2] + 7.6], tgt: [px, py, c.planet[2] + 1.6] }
     }
     const a = camOf(A)
     const b = camOf(B)
@@ -654,7 +655,7 @@ function FinalGate({ pos }) {
 /* collectible crystals (same events as before) */
 const CRYSTALS = [
   { pos: [-2.4, -1.9, 2.2], pick: 'Pickup_Sphere', color: '#22d3ee', key: 'sphere' },
-  { pos: [-7.2, 0.4, 1.2], pick: 'Pickup_Jar', color: '#34d399', key: 'jar' },
+  { pos: [-5.8, 0.75, 1.4], pick: 'Pickup_Jar', color: '#34d399', key: 'jar' },
   { pos: [3.4, 2.3, -19.4], pick: 'Pickup_Thunder', color: '#a855f7', key: 'thunder' },
   { pos: [-2.6, 2.2, -30.4], pick: 'Pickup_KeyCard', color: '#facc15', key: 'keycard' },
 ]
@@ -773,7 +774,7 @@ export default function SolarStory() {
     <>
       <div className="story-canvas">
       <Canvas
-        camera={{ position: [1, 0.5, 11], fov: 55, near: 0.1, far: 400 }}
+        camera={{ position: [-7.4, 0.6, 9.6], fov: 55, near: 0.1, far: 400 }}
         dpr={[1, 1.8]}
         gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
       >
@@ -792,7 +793,7 @@ export default function SolarStory() {
             <Lightformer intensity={2.2} position={[0, 3, -10]} scale={[8, 8, 1]} color="#ffffff" />
           </Environment>
           <Backdrop />
-          <HeroSun pos={[-14.5, 12.4, -74]} />
+          <HeroSun pos={[4.3, 5.0, -74]} />
           <Stars radius={90} depth={40} count={2600} factor={3.6} saturation={0} fade speed={0.4} />
 
           {/* CH·01 Earth — origin (day map + real cloud layer) */}
