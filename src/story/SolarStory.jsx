@@ -654,7 +654,7 @@ function FinalGate({ pos }) {
   const mapS = useFamilyModel('/models/spaceship.glb')
   const gate = useRef()
   const wrap = useRef()
-  useChapterCull(wrap, 6, 44, 1.15)
+  useChapterCull(wrap, 6)
   useFrame(({ clock }, dt) => {
     gate.current.rotation.z += dt * 0.55
     gate.current.rotation.x = Math.sin(clock.elapsedTime * 0.4) * 0.28
@@ -760,7 +760,7 @@ function Backdrop() {
 /* the prologue's sun — big presence at the hero, gone once the journey starts */
 function HeroSun({ pos }) {
   const grp = useRef()
-  useChapterCull(grp, 0, 300, 1.2)
+  useChapterCull(grp, 0, 300, 0.7)
   const texture = loadTex('/textures/2k_sun.jpg')
   return (
     <group ref={grp} position={pos}>
@@ -845,6 +845,7 @@ export default function SolarStory() {
 
           {/* CH·02 Mars — the arsenal */}
           <Planet url="/textures/2k_mars.jpg" pos={[5.0, 0.9, -16]} radius={1.35} spin={0.07} atmo="#ff7a55" j={2} />
+          <Moonlet center={[5.0, 0.9, -16]} j={2} dist={2.3} size={0.2} speed={0.6} phase={1.1} color="#8a7f76" />
           <Plate j={2} pos={[5.0, 2.75, -16]} num="CH·02" title="THE ARSENAL" sub="SQL · PostgreSQL · Node/Express · Java" />
           <MarsPatrol />
 
@@ -854,10 +855,13 @@ export default function SolarStory() {
 
           {/* CH·04 Jupiter — storm glory */}
           <Planet url="/textures/2k_jupiter.jpg" pos={[5.6, -0.4, -56]} radius={2.0} spin={0.06} atmo="#ffc98a" j={4} />
+          <Moonlet center={[5.6, -0.4, -56]} j={4} dist={2.75} size={0.24} speed={0.55} phase={0.4} color="#e8c878" />
+          <Moonlet center={[5.6, -0.4, -56]} j={4} dist={3.3} size={0.2} speed={0.42} phase={3.1} color="#cfe4ea" />
           <Plate j={4} pos={[5.6, 2.55, -56]} num="CH·04" title="STORM GLORY" sub="IIT Madras × FedEx Top 15 · India Innovates finalist" />
 
           {/* CH·05 Neptune — the log */}
           <Planet url="/textures/2k_neptune.jpg" pos={[-4.9, 0.7, -76]} radius={1.35} spin={0.055} atmo="#5f9cff" j={5} />
+          <Moonlet center={[-4.9, 0.7, -76]} j={5} dist={2.5} size={0.24} speed={-0.45} phase={1.9} color="#e0c9c2" />
           <Plate j={5} pos={[-4.9, 2.85, -76]} num="CH·05" title="THE LOG" sub="2023 → 2027" />
 
           {/* FINAL gate — mission control */}
