@@ -679,43 +679,73 @@ function MarsPatrol() {
   )
 }
 
+/* procedural accretion-disk texture: fiery white-hot inner rim cooling through
+   gold and magenta to violet, with slanted bright/dark filaments that read as
+   swirl arms once the disk spins */
+function makeDiskTex() {
+  const c = document.createElement('canvas')
+  c.width = 1024
+  c.height = 512
+  const x = c.getContext('2d')
+  const g = x.createLinearGradient(0, 0, c.width, 0)
+  g.addColorStop(0, 'rgba(255,248,232,1)')
+  g.addColorStop(0.16, 'rgba(255,222,170,0.96)')
+  g.addColorStop(0.34, 'rgba(255,142,88,0.9)')
+  g.addColorStop(0.52, 'rgba(232,107,255,0.85)')
+  g.addColorStop(0.72, 'rgba(120,52,200,0.62)')
+  g.addColorStop(0.88, 'rgba(56,26,94,0.34)')
+  g.addColorStop(1, 'rgba(30,10,56,0)')
+  x.fillStyle = g
+  x.fillRect(0, 0, c.width, c.height)
+  // filaments along the wrap direction (height = angle), triple-drawn for a seamless edge
+  for (let i = 0; i < 240; i++) {
+    const yy = Math.random() * c.height
+    const len = 110 + Math.random() * 320
+    const x0 = Math.random() * c.width
+    const slant = (yy / c.height) * 220 * (0.4 + Math.random() * 1.2)
+    const bright = Math.random() < 0.36
+    x.strokeStyle = bright
+      ? `rgba(255,250,238,${0.05 + Math.random() * 0.13})`
+      : `rgba(8,3,20,${0.1 + Math.random() * 0.22})`
+    x.lineWidth = 1 + Math.random() * 3.4
+    for (const off of [0, -c.height, c.height]) {
+      x.beginPath()
+      x.moveTo(x0, yy + off)
+      x.quadraticCurveTo(x0 + len * 0.55 + slant * 0.45, yy + off + len * 0.38, x0 + len + slant, yy + off + len)
+      x.stroke()
+    }
+  }
+  const t = new THREE.CanvasTexture(c)
+  t.wrapS = t.wrapT = THREE.RepeatWrapping
+  return t
+}
+
 /* finale showpiece: an exploding black hole (Interstellar-style) —
-   pure-black event horizon, blazing photon ring, tilted accretion
-   disk with a fiery-purple gradient, and twin energy jets */
+   pure-black event horizon, blazing photon ring, and a layered
+   swirling accretion disk with differential rotation */
 function BlackHole({ pos }) {
   const mapS = useFamilyModel('/models/spaceship.glb')
   const wrap = useRef()
+  const inner = useRef()
   const disk = useRef()
+  const halo = useRef()
   const ring = useRef()
   useChapterCull(wrap, 6)
-  const geometry = useMemo(() => radialRingGeometry(1.95, 4.7, 200), [])
-  const halo = useMemo(() => radialRingGeometry(1.9, 6.2, 200), [])
-  const diskTex = useMemo(() => {
-    // radial gradient across the disk: deep violet edge → white-hot inner rim
-    const c = document.createElement('canvas')
-    c.width = 512
-    c.height = 8
-    const ctx = c.getContext('2d')
-    const g = ctx.createLinearGradient(0, 0, 512, 0)
-    g.addColorStop(0, 'rgba(42,15,58,0.9)')
-    g.addColorStop(0.2, '#7b2fbf')
-    g.addColorStop(0.42, '#e86bff')
-    g.addColorStop(0.6, '#ffd9a0')
-    g.addColorStop(0.72, '#ffffff')
-    g.addColorStop(0.83, '#ffd166')
-    g.addColorStop(1, 'rgba(59,29,94,0.7)')
-    ctx.fillStyle = g
-    ctx.fillRect(0, 0, 512, 8)
-    const t = new THREE.CanvasTexture(c)
-    return t
-  }, [])
+  const geoInner = useMemo(() => radialRingGeometry(1.66, 2.5, 220), [])
+  const geoMid = useMemo(() => radialRingGeometry(2.1, 4.7, 220), [])
+  const geoHalo = useMemo(() => radialRingGeometry(2.0, 6.6, 220), [])
+  const texInner = useMemo(makeDiskTex, [])
+  const texMid = useMemo(makeDiskTex, [])
   useFrame(({ clock }, dt) => {
-    disk.current.rotation.z += dt * 0.42
-    // pulsing "eruption" energy
+    // differential rotation: inner ring whips around, mid disk glides, halo drifts
+    inner.current.rotation.z += dt * 0.8
+    disk.current.rotation.z -= dt * 0.32
+    halo.current.rotation.z += dt * 0.12
+    // eruption pulse
     const p = 1 + Math.sin(clock.elapsedTime * 2.1) * 0.03
     ring.current.scale.setScalar(p)
-    disk.current.scale.setScalar(p)
   })
+  const tilt = [-Math.PI / 2 + 0.38, 0, 0.2]
   return (
     <group ref={wrap} position={pos}>
       {/* event horizon — swallows everything inside it */}
@@ -725,13 +755,13 @@ function BlackHole({ pos }) {
       </mesh>
       {/* photon ring hugging the horizon */}
       <mesh ref={ring}>
-        <torusGeometry args={[1.68, 0.05, 12, 96]} />
-        <meshBasicMaterial color="#ffeaff" toneMapped={false} fog={false} />
+        <torusGeometry args={[1.62, 0.09, 12, 96]} />
+        <meshBasicMaterial color="#fff1ff" toneMapped={false} fog={false} />
       </mesh>
-      {/* accretion disk: tilted, slowly swirling */}
-      <mesh ref={disk} rotation={[-Math.PI / 2 + 0.38, 0, 0.18]} geometry={geometry}>
+      {/* hot inner disk */}
+      <mesh ref={inner} rotation={[-Math.PI / 2 + 0.3, 0, 0.12]} geometry={geoInner}>
         <meshBasicMaterial
-          map={diskTex}
+          map={texInner}
           transparent
           side={THREE.DoubleSide}
           depthWrite={false}
@@ -739,27 +769,30 @@ function BlackHole({ pos }) {
           fog={false}
         />
       </mesh>
-      {/* wide soft halo so the disk blooms outward like the reference art */}
-      <mesh rotation={[-Math.PI / 2 + 0.38, 0, 0.18]} geometry={halo}>
+      {/* main swirling disk (slightly different tilt for pseudo-volume) */}
+      <mesh ref={disk} rotation={tilt} geometry={geoMid}>
         <meshBasicMaterial
-          map={diskTex}
+          map={texMid}
           transparent
-          opacity={0.28}
+          opacity={0.95}
+          side={THREE.DoubleSide}
+          depthWrite={false}
+          toneMapped={false}
+          fog={false}
+        />
+      </mesh>
+      {/* wide additive halo so the disk blooms outward like the reference art */}
+      <mesh ref={halo} rotation={tilt} geometry={geoHalo}>
+        <meshBasicMaterial
+          map={texMid}
+          transparent
+          opacity={0.3}
           blending={THREE.AdditiveBlending}
           side={THREE.DoubleSide}
           depthWrite={false}
           toneMapped={false}
           fog={false}
         />
-      </mesh>
-      {/* twin erupting jets */}
-      <mesh position={[0, 3.6, 0]}>
-        <coneGeometry args={[0.55, 3.4, 20, 1, true]} />
-        <meshBasicMaterial color="#b16fff" transparent opacity={0.2} blending={THREE.AdditiveBlending} side={THREE.DoubleSide} depthWrite={false} />
-      </mesh>
-      <mesh position={[0, -3.6, 0]} rotation={[Math.PI, 0, 0]}>
-        <coneGeometry args={[0.55, 3.4, 20, 1, true]} />
-        <meshBasicMaterial color="#b16fff" transparent opacity={0.2} blending={THREE.AdditiveBlending} side={THREE.DoubleSide} depthWrite={false} />
       </mesh>
       <pointLight intensity={300} distance={110} decay={1.5} color="#c084fc" />
       {/* Fernando coasting in on approach */}
@@ -774,7 +807,7 @@ function BlackHole({ pos }) {
           <FittedModel map={mapS} names={['Spaceship_RaeTheRedPanda']} radius={0.5} yaw={2.2} />
         </group>
       </Float>
-      <Sparkles count={26} scale={[7, 5, 3]} size={2.4} speed={0.5} color="#c084fc" opacity={0.75} />
+      <Sparkles count={26} scale={[7, 4, 3]} size={2.4} speed={0.5} color="#c084fc" opacity={0.75} />
     </group>
   )
 }
