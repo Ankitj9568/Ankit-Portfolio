@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import Navbar from './components/Navbar'
 import Cursor from './components/Cursor'
+import BootSequence from './components/Boot'
 import SolarStory from './story/SolarStory'
 import Hero from './components/Hero'
 import About from './components/About'
@@ -45,6 +46,7 @@ export default function App() {
   return (
     <>
       <Cursor />
+      <BootSequence />
       <SolarStory />
       <Navbar />
       {/* main content floats above the fixed story canvas */}
