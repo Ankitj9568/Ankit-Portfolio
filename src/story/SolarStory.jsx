@@ -518,7 +518,10 @@ function HyperDrive({ color, opacity = 0.5 }) {
   )
   useFrame((_, dt) => {
     const { phase, cover } = warpState()
-    const drive = Math.max(phase, travelFx.boost)
+    // drive level = strongest of: warp boost (rocket click) or scroll travel.
+    // NOTE: it must be warp.boost, NOT the warp phase — the phase is 1 when
+    // idle, which used to keep the streaks eternally blazing at planets.
+    const drive = Math.max(warp.boost, travelFx.boost)
     const conv = 1 - cover * 0.62 // streaks funnel into the tunnel
     // parked at a planet: streaks nearly stop — a few faint, distant, slow lines
     const rest = 1 - smooth01((drive - 0.05) / 0.2)
@@ -649,46 +652,47 @@ function MarsPatrol() {
   )
 }
 
-/* finale beacon: warp gate + the fleet on approach (no clunky white kit-blocks) */
+/* finale beacon: a destination sun the fleet is approaching (replaced the warp-gate torus) */
 function FinalGate({ pos }) {
   const mapS = useFamilyModel('/models/spaceship.glb')
-  const gate = useRef()
+  const sun = useRef()
   const wrap = useRef()
   useChapterCull(wrap, 6)
-  useFrame(({ clock }, dt) => {
-    gate.current.rotation.z += dt * 0.55
-    gate.current.rotation.x = Math.sin(clock.elapsedTime * 0.4) * 0.28
+  const texture = loadTex('/textures/2k_sun.jpg')
+  useFrame(({ clock }) => {
+    // gentle solar breathing
+    sun.current.scale.setScalar(1 + Math.sin(clock.elapsedTime * 1.6) * 0.018)
   })
   return (
     <group ref={wrap} position={pos}>
-      <group ref={gate} rotation={[0, 0.5, 0]}>
-        <mesh>
-          <torusGeometry args={[1.7, 0.075, 12, 96]} />
-          <meshBasicMaterial color="#22d3ee" toneMapped={false} />
-        </mesh>
-        <mesh rotation={[0, 0, 0.35]}>
-          <torusGeometry args={[2.0, 0.028, 8, 96]} />
-          <meshBasicMaterial color="#a855f7" toneMapped={false} transparent opacity={0.75} />
-        </mesh>
-        <mesh>
-          <circleGeometry args={[1.6, 48]} />
-          <meshBasicMaterial color="#67e8f9" transparent opacity={0.16} side={THREE.DoubleSide} toneMapped={false} />
-        </mesh>
-        <pointLight intensity={26} distance={9} color="#67e8f9" />
-      </group>
-      {/* Fernando coasting through the gate */}
+      {/* the sun itself */}
+      <mesh ref={sun}>
+        <sphereGeometry args={[2.4, 48, 48]} />
+        <meshBasicMaterial map={texture} toneMapped={false} fog={false} />
+      </mesh>
+      {/* corona layers */}
+      <mesh>
+        <sphereGeometry args={[3.0, 32, 32]} />
+        <meshBasicMaterial color="#ffd166" transparent opacity={0.22} blending={THREE.AdditiveBlending} depthWrite={false} />
+      </mesh>
+      <mesh>
+        <sphereGeometry args={[3.9, 32, 32]} />
+        <meshBasicMaterial color="#ff9e64" transparent opacity={0.1} blending={THREE.AdditiveBlending} depthWrite={false} />
+      </mesh>
+      <pointLight intensity={340} distance={120} decay={1.5} color="#ffd9a0" />
+      {/* Fernando coasting in on approach */}
       <Float speed={1.6} rotationIntensity={0.18} floatIntensity={0.7}>
-        <group position={[-3.0, 1.15, 0.9]} scale={0.5}>
+        <group position={[-3.6, 1.5, 1.0]} scale={0.5}>
           <FittedModel map={mapS} names={['Spaceship_FernandoTheFlamingo']} radius={1} yaw={-Math.PI / 2} pitch={0.1} />
         </group>
       </Float>
       {/* Rae loitering below */}
       <Float speed={1.3} rotationIntensity={0.2} floatIntensity={0.9}>
-        <group position={[2.9, -1.2, 1.2]} scale={0.45}>
+        <group position={[3.4, -1.5, 1.3]} scale={0.45}>
           <FittedModel map={mapS} names={['Spaceship_RaeTheRedPanda']} radius={0.5} yaw={2.2} />
         </group>
       </Float>
-      <Sparkles count={26} scale={[5, 5, 3]} size={2.4} speed={0.35} color="#8be9ff" opacity={0.7} />
+      <Sparkles count={26} scale={[6, 6, 3]} size={2.4} speed={0.35} color="#ffd166" opacity={0.7} />
     </group>
   )
 }
