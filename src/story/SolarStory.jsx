@@ -78,7 +78,7 @@ const emitHover = (on) =>
    planets alternate screen-side: index odd → planet on the LEFT? no —
    here `side` refers to where the planet sits: 'left' | 'right'            */
 const CHAPTERS = [
-  { id: 'home', pos: [0, 0.4, 10], tgt: [0, 0.4, 4] },             // prologue: deep space
+  { id: 'home', pos: [1, 0.5, 11], tgt: [-6.2, 0.35, 2.5] },       // prologue: deep space, Earth frames right
   { id: 'about', planet: [(-4.6), 0.3, 0], side: 'left' },         // Earth
   { id: 'skills', planet: [5.0, 0.9, -16], side: 'right' },        // Mars
   { id: 'projects', planet: [(-5.4), 0.5, -34], side: 'left' },    // Saturn (rings = projects)
@@ -89,8 +89,8 @@ const CHAPTERS = [
 
 function Rig() {
   const { camera } = useThree()
-  const posRef = useRef(new THREE.Vector3(0, 0.5, 11))
-  const tgtRef = useRef(new THREE.Vector3(0, 0.4, 6))
+  const posRef = useRef(new THREE.Vector3(1, 0.5, 11))
+  const tgtRef = useRef(new THREE.Vector3(-6.2, 0.35, 2.5))
   const p = useMemo(() => new THREE.Vector3(), [])
   const t = useMemo(() => new THREE.Vector3(), [])
 
@@ -262,21 +262,25 @@ function ProjectArc({ arc, index }) {
           zIndexRange={[10, 0]}
           style={{ pointerEvents: 'none' }}
         >
-          <div className={`ring-label ${hov || open ? 'hot' : ''}`} style={{ '--c': arc.color }}>
-            {projectFromData.name}
-          </div>
+          <GatedDom j={3}>
+            <div className={`ring-label ${hov || open ? 'hot' : ''}`} style={{ '--c': arc.color }}>
+              {projectFromData.name}
+            </div>
+          </GatedDom>
         </Html>
       )}
       {projectFromData && open && (
         <Html position={[0, arc.y + 0.35, 0]} center distanceFactor={8} style={{ pointerEvents: 'auto' }}>
-          <div className="ring-callout" style={{ '--c': arc.color }}>
-            <b>{projectFromData.name}</b>
-            <p>{projectFromData.description.slice(0, 120)}…</p>
-            <div className="ring-links">
-              {projectFromData.live && <a href={projectFromData.live} target="_blank" rel="noreferrer">Live ↗</a>}
-              <a href={projectFromData.repo} target="_blank" rel="noreferrer">GitHub ↗</a>
+          <GatedDom j={3}>
+            <div className="ring-callout" style={{ '--c': arc.color }}>
+              <b>{projectFromData.name}</b>
+              <p>{projectFromData.description.slice(0, 120)}…</p>
+              <div className="ring-links">
+                {projectFromData.live && <a href={projectFromData.live} target="_blank" rel="noreferrer">Live ↗</a>}
+                <a href={projectFromData.repo} target="_blank" rel="noreferrer">GitHub ↗</a>
+              </div>
             </div>
-          </div>
+          </GatedDom>
         </Html>
       )}
     </group>
@@ -397,14 +401,36 @@ function HyperDrive({ color, opacity = 0.5 }) {
 }
 
 /* ── chapter plaques (HTML anchored in 3D) ──── */
-function Plate({ pos, num, title, sub }) {
+/* Html labels ignore scene fog, so gate them to chapter proximity */
+function GatedDom({ j, style = {}, children }) {
+  const ref = useRef()
+  useFrame(() => {
+    const { i, t } = getProgress()
+    const d = Math.abs(i + t - j)
+    const v = Math.max(0, 1 - Math.max(0, d - 0.15) / 0.6)
+    const el = ref.current
+    if (el) {
+      el.style.opacity = v
+      el.style.display = v > 0.02 ? '' : 'none'
+    }
+  })
+  return (
+    <div ref={ref} style={{ ...style, opacity: 0 }}>
+      {children}
+    </div>
+  )
+}
+
+function Plate({ j, pos, num, title, sub }) {
   return (
     <Html position={pos} center distanceFactor={13} zIndexRange={[9, 0]} style={{ pointerEvents: 'none' }}>
-      <div className="planet-plate">
-        <span className="pp-num">{num}</span>
-        <b>{title}</b>
-        {sub && <i>{sub}</i>}
-      </div>
+      <GatedDom j={j}>
+        <div className="planet-plate">
+          <span className="pp-num">{num}</span>
+          <b>{title}</b>
+          {sub && <i>{sub}</i>}
+        </div>
+      </GatedDom>
     </Html>
   )
 }
@@ -458,21 +484,44 @@ function MarsPatrol() {
   )
 }
 
-function ContactStation({ pos }) {
-  const mapB = useFamilyModel('/models/base.glb')
-  const mapC = useFamilyModel('/models/connector.glb')
-  const mapP = useFamilyModel('/models/solarpanel.glb')
-  const ref = useRef()
-  useFrame(({ clock }) => {
-    ref.current.rotation.y = clock.elapsedTime * 0.12
+/* finale beacon: warp gate + the fleet on approach (no clunky white kit-blocks) */
+function FinalGate({ pos }) {
+  const mapS = useFamilyModel('/models/spaceship.glb')
+  const gate = useRef()
+  useFrame(({ clock }, dt) => {
+    gate.current.rotation.z += dt * 0.55
+    gate.current.rotation.x = Math.sin(clock.elapsedTime * 0.4) * 0.28
   })
   return (
-    <group ref={ref} position={pos}>
-      <FittedModel map={mapB} names={['Base_Large']} radius={1.35} />
-      <group position={[1.7, 0, 0]}><FittedModel map={mapC} names={['Connector']} radius={0.75} roll={Math.PI / 2} /></group>
-      <group position={[-1.7, 0, 0]}><FittedModel map={mapC} names={['Connector']} radius={0.75} roll={Math.PI / 2} /></group>
-      <group position={[3.3, 0, 0]}><FittedModel map={mapP} names={['SolarPanel_Structure']} radius={0.9} /></group>
-      <group position={[-3.3, 0, 0]}><FittedModel map={mapP} names={['SolarPanel_Structure']} radius={0.9} /></group>
+    <group position={pos}>
+      <group ref={gate} rotation={[0, 0.5, 0]}>
+        <mesh>
+          <torusGeometry args={[1.7, 0.075, 12, 96]} />
+          <meshBasicMaterial color="#22d3ee" toneMapped={false} />
+        </mesh>
+        <mesh rotation={[0, 0, 0.35]}>
+          <torusGeometry args={[2.0, 0.028, 8, 96]} />
+          <meshBasicMaterial color="#a855f7" toneMapped={false} transparent opacity={0.75} />
+        </mesh>
+        <mesh>
+          <circleGeometry args={[1.6, 48]} />
+          <meshBasicMaterial color="#67e8f9" transparent opacity={0.16} side={THREE.DoubleSide} toneMapped={false} />
+        </mesh>
+        <pointLight intensity={26} distance={9} color="#67e8f9" />
+      </group>
+      {/* Fernando coasting through the gate */}
+      <Float speed={1.6} rotationIntensity={0.18} floatIntensity={0.7}>
+        <group position={[-3.0, 1.15, 0.9]} scale={0.5}>
+          <FittedModel map={mapS} names={['Spaceship_FernandoTheFlamingo']} radius={1} yaw={-Math.PI / 2} pitch={0.1} />
+        </group>
+      </Float>
+      {/* Rae loitering below */}
+      <Float speed={1.3} rotationIntensity={0.2} floatIntensity={0.9}>
+        <group position={[2.9, -1.2, 1.2]} scale={0.45}>
+          <FittedModel map={mapS} names={['Spaceship_RaeTheRedPanda']} radius={0.5} yaw={2.2} />
+        </group>
+      </Float>
+      <Sparkles count={26} scale={[5, 5, 3]} size={2.4} speed={0.35} color="#8be9ff" opacity={0.7} />
     </group>
   )
 }
@@ -530,11 +579,11 @@ function Backdrop() {
         <sphereGeometry args={[140, 32, 32]} />
         <meshBasicMaterial map={stars} opacity={0.35} transparent depthWrite={false} fog={false} />
       </mesh>
-      <mesh position={[0, 8, -150]}>
+      <mesh position={[15, 9, -150]}>
         <sphereGeometry args={[3.4, 32, 32]} />
         <meshBasicMaterial map={sun} toneMapped={false} fog={false} />
       </mesh>
-      <pointLight position={[0, 8, -148]} intensity={520} distance={220} decay={1.6} color="#ffd9a0" />
+      <pointLight position={[15, 9, -148]} intensity={520} distance={220} decay={1.6} color="#ffd9a0" />
     </>
   )
 }
@@ -544,11 +593,11 @@ export default function SolarStory() {
   return (
     <div className="story-canvas">
       <Canvas
-        camera={{ position: [0, 0.5, 11], fov: 55, near: 0.1, far: 400 }}
+        camera={{ position: [1, 0.5, 11], fov: 55, near: 0.1, far: 400 }}
         dpr={[1, 1.8]}
         gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
       >
-        <fog attach="fog" args={['#04040c', 14, 60]} />
+        <fog attach="fog" args={['#04040c', 11, 46]} />
         <ambientLight intensity={0.45} />
         <hemisphereLight color="#9db8ff" groundColor="#3b2d6b" intensity={0.4} />
         <directionalLight position={[3, 4, 6]} intensity={2.1} />
@@ -568,29 +617,29 @@ export default function SolarStory() {
           {/* CH·01 Earth — origin */}
           <Planet url="/textures/2k_earth_daymap.jpg" pos={[-4.6, 0.3, 0]} radius={1.6} atmo="#4d9fff" />
           <Moon center={[-4.6, 0.3, 0]} />
-          <Plate pos={[-4.6, 3.05, 0]} num="CH·01" title="THE HOME PLANET" sub="Kolkata · B.Tech IT · TMSL" />
+          <Plate j={1} pos={[-4.6, 3.05, 0]} num="CH·01" title="THE HOME PLANET" sub="Kolkata · B.Tech IT · TMSL" />
           <EarthCameos />
 
           {/* CH·02 Mars — the arsenal */}
           <Planet url="/textures/2k_mars.jpg" pos={[5.0, 0.9, -16]} radius={1.35} spin={0.07} atmo="#ff7a55" />
-          <Plate pos={[5.0, 2.75, -16]} num="CH·02" title="THE ARSENAL" sub="SQL · PostgreSQL · Node/Express · Java" />
+          <Plate j={2} pos={[5.0, 2.75, -16]} num="CH·02" title="THE ARSENAL" sub="SQL · PostgreSQL · Node/Express · Java" />
           <MarsPatrol />
 
           {/* CH·03 Saturn — rings are projects */}
           <Saturn pos={[-5.4, 0.5, -34]} />
-          <Plate pos={[-5.4, 3.35, -34]} num="CH·03" title="MISSION DECK" sub="every ring = a shipped project" />
+          <Plate j={3} pos={[-5.4, 3.35, -34]} num="CH·03" title="MISSION DECK" sub="every ring = a shipped project" />
 
           {/* CH·04 Jupiter — storm glory */}
           <Planet url="/textures/2k_jupiter.jpg" pos={[5.6, -0.4, -56]} radius={2.0} spin={0.06} atmo="#ffc98a" />
-          <Plate pos={[5.6, 2.55, -56]} num="CH·04" title="STORM GLORY" sub="IIT Madras × FedEx Top 15 · India Innovates finalist" />
+          <Plate j={4} pos={[5.6, 2.55, -56]} num="CH·04" title="STORM GLORY" sub="IIT Madras × FedEx Top 15 · India Innovates finalist" />
 
           {/* CH·05 Neptune — the log */}
           <Planet url="/textures/2k_neptune.jpg" pos={[-4.9, 0.7, -76]} radius={1.35} spin={0.055} atmo="#5f9cff" />
-          <Plate pos={[-4.9, 2.85, -76]} num="CH·05" title="THE LOG" sub="2023 → 2027" />
+          <Plate j={5} pos={[-4.9, 2.85, -76]} num="CH·05" title="THE LOG" sub="2023 → 2027" />
 
-          {/* FINAL Station — mission control */}
-          <ContactStation pos={[4.8, 0.35, -94]} />
-          <Plate pos={[4.8, 2.6, -94]} num="FINAL" title="MISSION CONTROL" sub="open a transmission" />
+          {/* FINAL gate — mission control */}
+          <FinalGate pos={[4.8, 0.35, -94]} />
+          <Plate j={6} pos={[4.8, 2.6, -94]} num="FINAL" title="MISSION CONTROL" sub="open a transmission" />
 
           {/* the traveler */}
           <RocketHotspot />
@@ -615,4 +664,4 @@ export default function SolarStory() {
   )
 }
 
-preloadFamilies(['/models/spaceship.glb', '/models/rock.glb', '/models/pickup.glb', '/models/base.glb', '/models/connector.glb', '/models/solarpanel.glb'])
+preloadFamilies(['/models/spaceship.glb', '/models/rock.glb', '/models/pickup.glb'])
