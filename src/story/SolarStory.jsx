@@ -1,4 +1,4 @@
-import { Suspense, useMemo, useRef, useState } from 'react'
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Float, Html, Sparkles, Stars, Trail, Lightformer, Environment } from '@react-three/drei'
 import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing'
@@ -71,8 +71,22 @@ function Atmosphere({ radius = 1, color = '#6ab7ff', scale = 1.055, power = 3, s
 
 /* warp boost shared with the cursor/chip UX */
 export const warp = { boost: 0 }
+/* warp drive telemetry read by the DOM cockpit (no React re-renders) */
+export const warpFx = { cover: 0, phase: 0, vel: 99.3 }
 const emitHover = (on) =>
   window.dispatchEvent(new Event(on ? 'akj-cursor-hover' : 'akj-cursor-blur'))
+
+/* warp timeline: phase 0 (launch) → 1 (emergence). cover = whiteout opacity */
+const clamp01 = (x) => Math.min(Math.max(x, 0), 1)
+const smooth01 = (x) => { x = clamp01(x); return x * x * (3 - 2 * x) }
+function warpState() {
+  const phase = clamp01(1 - warp.boost)
+  const cover =
+    phase < 0.72 ? smooth01((phase - 0.28) / 0.44)
+    : phase < 0.85 ? 1
+    : 1 - smooth01((phase - 0.85) / 0.14)
+  return { phase, cover }
+}
 
 /* ── the story: one waypoint per chapter ─────────────────
    planets alternate screen-side: index odd → planet on the LEFT? no —
@@ -94,8 +108,12 @@ function Rig() {
   const p = useMemo(() => new THREE.Vector3(), [])
   const t = useMemo(() => new THREE.Vector3(), [])
 
-  useFrame((_, dt) => {
+  useFrame(({ clock }, dt) => {
     warp.boost = Math.max(0, warp.boost - dt * 0.5)
+    const { phase, cover } = warpState()
+    warpFx.cover = cover
+    warpFx.phase = phase
+    warpFx.vel = 99.3 + phase * 913
 
     const { i } = getProgress()
     const A = CHAPTERS[Math.min(i, CHAPTERS.length - 1)]
@@ -118,7 +136,20 @@ function Rig() {
     posRef.current.lerp(p, Math.min(dt * 2.2, 1))
     tgtRef.current.lerp(t, Math.min(dt * 2.8, 1))
     camera.position.copy(posRef.current)
+    // hull shake while tearing through space
+    if (cover > 0.02) {
+      const amp = cover * 0.1
+      const tt = clock.elapsedTime
+      camera.position.x += Math.sin(tt * 61) * amp
+      camera.position.y += Math.cos(tt * 47) * amp * 0.7
+    }
     camera.lookAt(tgtRef.current)
+    // FOV kick: the stretch of space itself mid-warp
+    const fov = 55 + Math.sin(phase * Math.PI) * 9
+    if (Math.abs(camera.fov - fov) > 0.01) {
+      camera.fov = fov
+      camera.updateProjectionMatrix()
+    }
   })
   return null
 }
@@ -400,6 +431,33 @@ function RocketHotspot() {
   )
 }
 
+/* expanding shockwave the moment the ship breaks out of warp */
+const burstDir = new THREE.Vector3()
+function WarpBurst() {
+  const ref = useRef()
+  const st = useRef({ prev: 0, t0: -1 })
+  useFrame(({ camera, clock }) => {
+    const m = ref.current
+    const phase = clamp01(1 - warp.boost)
+    if (st.current.prev < 0.8 && phase >= 0.8) st.current.t0 = clock.elapsedTime
+    st.current.prev = phase
+    const age = clock.elapsedTime - st.current.t0
+    if (st.current.t0 < 0 || age > 0.85) { m.visible = false; return }
+    m.visible = true
+    camera.getWorldDirection(burstDir)
+    m.position.copy(camera.position).addScaledVector(burstDir, 8)
+    m.lookAt(camera.position)
+    m.scale.setScalar(0.5 + age * 30)
+    m.material.opacity = Math.max(0, 0.8 * (1 - age / 0.85))
+  })
+  return (
+    <mesh ref={ref} visible={false}>
+      <torusGeometry args={[1.05, 0.045, 8, 80]} />
+      <meshBasicMaterial color="#eafaff" transparent toneMapped={false} />
+    </mesh>
+  )
+}
+
 /* ── speed streaks, local to the camera ─────── */
 function HyperDrive({ color, opacity = 0.5 }) {
   const ref = useRef()
@@ -417,12 +475,16 @@ function HyperDrive({ color, opacity = 0.5 }) {
     [],
   )
   useFrame((_, dt) => {
+    const { phase, cover } = warpState()
+    const conv = 1 - cover * 0.62 // streaks funnel into the tunnel
+    const mat = ref.current.material
+    mat.opacity = opacity + phase * 0.45
     ref.current.position.copy(camera.position)
     streaks.forEach((s, i) => {
-      s.z -= s.v * dt * (1 + warp.boost * 6)
+      s.z -= s.v * dt * (1 + phase * 11)
       if (s.z < -6) { s.z = 6 }
-      dummy.position.set(s.x, s.y, s.z)
-      dummy.scale.set(0.012, 0.012, s.len * (0.32 + warp.boost * 0.9))
+      dummy.position.set(s.x * conv, s.y * conv, s.z)
+      dummy.scale.set(0.012, 0.012, s.len * (0.32 + phase * 2.6))
       dummy.updateMatrix()
       ref.current.setMatrixAt(i, dummy.matrix)
     })
@@ -640,10 +702,63 @@ function Backdrop() {
   )
 }
 
+/* the prologue's sun — big presence at the hero, gone once the journey starts */
+function HeroSun({ pos }) {
+  const grp = useRef()
+  useChapterCull(grp, 0, 300, 1.2)
+  const texture = loadTex('/textures/2k_sun.jpg')
+  return (
+    <group ref={grp} position={pos}>
+      <mesh>
+        <sphereGeometry args={[5.5, 32, 32]} />
+        <meshBasicMaterial map={texture} toneMapped={false} fog={false} />
+      </mesh>
+      <pointLight intensity={260} distance={70} decay={1.5} color="#ffd9a0" />
+    </group>
+  )
+}
+
+/* cockpit viewport chrome (DOM): corner brackets + live VEL / FLIGHT MODE HUD,
+   and the fullscreen whiteout flash — warpFx is written by the Rig each frame */
+function CockpitFrame() {
+  const flash = useRef()
+  const vel = useRef()
+  const mode = useRef()
+  useEffect(() => {
+    let raf
+    const tick = () => {
+      if (flash.current) flash.current.style.opacity = warpFx.cover
+      if (vel.current) vel.current.textContent = warpFx.vel.toFixed(1)
+      if (mode.current) mode.current.textContent = warpFx.cover > 0.25 ? 'WARP' : 'CRUISE'
+      raf = requestAnimationFrame(tick)
+    }
+    tick()
+    return () => cancelAnimationFrame(raf)
+  }, [])
+  return (
+    <>
+      <div className="warp-flash" ref={flash} aria-hidden="true" />
+      <div className="cockpit" aria-hidden="true">
+        <i className="ck-corner tl" />
+        <i className="ck-corner tr" />
+        <i className="ck-corner bl" />
+        <i className="ck-corner br" />
+        <div className="ck-hud ck-left">
+          VEL <b><span ref={vel}>99.3</span></b> <i>C</i>
+        </div>
+        <div className="ck-hud ck-right">
+          FLIGHT MODE <b ref={mode}>CRUISE</b>
+        </div>
+      </div>
+    </>
+  )
+}
+
 /* ── full story canvas ──────────────────────── */
 export default function SolarStory() {
   return (
-    <div className="story-canvas">
+    <>
+      <div className="story-canvas">
       <Canvas
         camera={{ position: [1, 0.5, 11], fov: 55, near: 0.1, far: 400 }}
         dpr={[1, 1.8]}
@@ -664,6 +779,7 @@ export default function SolarStory() {
             <Lightformer intensity={2.2} position={[0, 3, -10]} scale={[8, 8, 1]} color="#ffffff" />
           </Environment>
           <Backdrop />
+          <HeroSun pos={[-14.5, 12.4, -74]} />
           <Stars radius={90} depth={40} count={2600} factor={3.6} saturation={0} fade speed={0.4} />
 
           {/* CH·01 Earth — origin (day map + real cloud layer) */}
@@ -703,6 +819,7 @@ export default function SolarStory() {
 
           <HyperDrive color="#7dd3fc" />
           <HyperDrive color="#c084fc" opacity={0.3} />
+          <WarpBurst />
         </Suspense>
 
         <Rig />
@@ -711,8 +828,10 @@ export default function SolarStory() {
           <Bloom mipmapBlur intensity={0.75} luminanceThreshold={0.25} luminanceSmoothing={0.35} radius={0.7} />
           <Vignette eskil={false} offset={0.22} darkness={0.52} />
         </EffectComposer>
-      </Canvas>
-    </div>
+        </Canvas>
+      </div>
+      <CockpitFrame />
+    </>
   )
 }
 

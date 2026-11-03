@@ -748,3 +748,53 @@ button { font-family: inherit; }
 @media (hover: none) {
   .ring-label { font-size: 0.74rem; }
 }
+
+/* ===== COCKPIT VIEWPORT FRAME + WARP DRIVE ===== */
+.cockpit {
+  position: fixed; inset: 14px; z-index: 5;
+  pointer-events: none;
+  border: 1px solid rgba(103, 232, 249, 0.13);
+  border-radius: 24px;
+  font-family: var(--font-mono);
+}
+.ck-corner {
+  position: absolute; width: 24px; height: 24px;
+  border: 2px solid rgba(103, 232, 249, 0.7);
+}
+.ck-corner.tl { top: -2px; left: -2px; border-right: none; border-bottom: none; border-top-left-radius: 24px; }
+.ck-corner.tr { top: -2px; right: -2px; border-left: none; border-bottom: none; border-top-right-radius: 24px; }
+.ck-corner.bl { bottom: -2px; left: -2px; border-right: none; border-top: none; border-bottom-left-radius: 24px; }
+.ck-corner.br { bottom: -2px; right: -2px; border-left: none; border-top: none; border-bottom-right-radius: 24px; }
+.ck-hud {
+  position: absolute;
+  font-size: 0.6rem; letter-spacing: 0.22em;
+  color: rgba(190, 216, 240, 0.55);
+  background: rgba(6, 8, 18, 0.55);
+  border: 1px solid rgba(103, 232, 249, 0.18);
+  border-radius: 999px;
+  padding: 6px 13px;
+  backdrop-filter: blur(4px);
+  display: flex; align-items: center; gap: 6px;
+}
+.ck-hud b { color: #79e8ff; font-weight: 600; font-variant-numeric: tabular-nums; }
+.ck-hud i { font-style: normal; font-size: 0.5rem; opacity: 0.6; }
+.ck-left { top: 16px; left: 22px; }
+.ck-right { top: 16px; right: 22px; }
+.ck-right b { color: #ffd166; min-width: 52px; text-align: center; }
+
+/* the warp whiteout — covers the whole cockpit view then reveals emergence */
+.warp-flash {
+  position: fixed; inset: 0; z-index: 6;
+  pointer-events: none;
+  opacity: 0;
+  background:
+    radial-gradient(circle at 50% 50%, #ffffff 0%, #e7f8ff 34%, #b7e0ff 62%, rgba(159, 205, 255, 0) 100%);
+}
+
+@media (max-width: 720px) {
+  .cockpit { inset: 8px; border-radius: 16px; }
+  .ck-corner { width: 16px; height: 16px; }
+  .ck-hud { font-size: 0.55rem; padding: 5px 10px; }
+  .ck-left { left: 12px; top: 10px; }
+  .ck-right { right: 12px; top: 10px; }
+}
