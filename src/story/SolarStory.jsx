@@ -672,47 +672,102 @@ function MarsPatrol() {
   )
 }
 
-/* finale beacon: a destination sun the fleet is approaching (replaced the warp-gate torus) */
-function FinalGate({ pos }) {
+/* finale showpiece: an exploding black hole (Interstellar-style) —
+   pure-black event horizon, blazing photon ring, tilted accretion
+   disk with a fiery-purple gradient, and twin energy jets */
+function BlackHole({ pos }) {
   const mapS = useFamilyModel('/models/spaceship.glb')
-  const sun = useRef()
   const wrap = useRef()
+  const disk = useRef()
+  const ring = useRef()
   useChapterCull(wrap, 6)
-  const texture = loadTex('/textures/2k_sun.jpg')
-  useFrame(({ clock }) => {
-    // gentle solar breathing
-    sun.current.scale.setScalar(1 + Math.sin(clock.elapsedTime * 1.6) * 0.018)
+  const geometry = useMemo(() => radialRingGeometry(1.95, 4.7, 200), [])
+  const halo = useMemo(() => radialRingGeometry(1.9, 6.2, 200), [])
+  const diskTex = useMemo(() => {
+    // radial gradient across the disk: deep violet edge → white-hot inner rim
+    const c = document.createElement('canvas')
+    c.width = 512
+    c.height = 8
+    const ctx = c.getContext('2d')
+    const g = ctx.createLinearGradient(0, 0, 512, 0)
+    g.addColorStop(0, 'rgba(42,15,58,0.9)')
+    g.addColorStop(0.2, '#7b2fbf')
+    g.addColorStop(0.42, '#e86bff')
+    g.addColorStop(0.6, '#ffd9a0')
+    g.addColorStop(0.72, '#ffffff')
+    g.addColorStop(0.83, '#ffd166')
+    g.addColorStop(1, 'rgba(59,29,94,0.7)')
+    ctx.fillStyle = g
+    ctx.fillRect(0, 0, 512, 8)
+    const t = new THREE.CanvasTexture(c)
+    return t
+  }, [])
+  useFrame(({ clock }, dt) => {
+    disk.current.rotation.z += dt * 0.42
+    // pulsing "eruption" energy
+    const p = 1 + Math.sin(clock.elapsedTime * 2.1) * 0.03
+    ring.current.scale.setScalar(p)
+    disk.current.scale.setScalar(p)
   })
   return (
     <group ref={wrap} position={pos}>
-      {/* the sun itself */}
-      <mesh ref={sun}>
-        <sphereGeometry args={[2.4, 48, 48]} />
-        <meshBasicMaterial map={texture} toneMapped={false} fog={false} />
-      </mesh>
-      {/* corona layers */}
+      {/* event horizon — swallows everything inside it */}
       <mesh>
-        <sphereGeometry args={[3.0, 32, 32]} />
-        <meshBasicMaterial color="#ffd166" transparent opacity={0.22} blending={THREE.AdditiveBlending} depthWrite={false} />
+        <sphereGeometry args={[1.5, 48, 48]} />
+        <meshBasicMaterial color="#000000" toneMapped={false} fog={false} />
       </mesh>
-      <mesh>
-        <sphereGeometry args={[3.9, 32, 32]} />
-        <meshBasicMaterial color="#ff9e64" transparent opacity={0.1} blending={THREE.AdditiveBlending} depthWrite={false} />
+      {/* photon ring hugging the horizon */}
+      <mesh ref={ring}>
+        <torusGeometry args={[1.68, 0.05, 12, 96]} />
+        <meshBasicMaterial color="#ffeaff" toneMapped={false} fog={false} />
       </mesh>
-      <pointLight intensity={340} distance={120} decay={1.5} color="#ffd9a0" />
+      {/* accretion disk: tilted, slowly swirling */}
+      <mesh ref={disk} rotation={[-Math.PI / 2 + 0.38, 0, 0.18]} geometry={geometry}>
+        <meshBasicMaterial
+          map={diskTex}
+          transparent
+          side={THREE.DoubleSide}
+          depthWrite={false}
+          toneMapped={false}
+          fog={false}
+        />
+      </mesh>
+      {/* wide soft halo so the disk blooms outward like the reference art */}
+      <mesh rotation={[-Math.PI / 2 + 0.38, 0, 0.18]} geometry={halo}>
+        <meshBasicMaterial
+          map={diskTex}
+          transparent
+          opacity={0.28}
+          blending={THREE.AdditiveBlending}
+          side={THREE.DoubleSide}
+          depthWrite={false}
+          toneMapped={false}
+          fog={false}
+        />
+      </mesh>
+      {/* twin erupting jets */}
+      <mesh position={[0, 3.6, 0]}>
+        <coneGeometry args={[0.55, 3.4, 20, 1, true]} />
+        <meshBasicMaterial color="#b16fff" transparent opacity={0.2} blending={THREE.AdditiveBlending} side={THREE.DoubleSide} depthWrite={false} />
+      </mesh>
+      <mesh position={[0, -3.6, 0]} rotation={[Math.PI, 0, 0]}>
+        <coneGeometry args={[0.55, 3.4, 20, 1, true]} />
+        <meshBasicMaterial color="#b16fff" transparent opacity={0.2} blending={THREE.AdditiveBlending} side={THREE.DoubleSide} depthWrite={false} />
+      </mesh>
+      <pointLight intensity={300} distance={110} decay={1.5} color="#c084fc" />
       {/* Fernando coasting in on approach */}
       <Float speed={1.6} rotationIntensity={0.18} floatIntensity={0.7}>
-        <group position={[-3.6, 1.5, 1.0]} scale={0.5}>
+        <group position={[-3.8, 1.7, 1.0]} scale={0.5}>
           <FittedModel map={mapS} names={['Spaceship_FernandoTheFlamingo']} radius={1} yaw={-Math.PI / 2} pitch={0.1} />
         </group>
       </Float>
       {/* Rae loitering below */}
       <Float speed={1.3} rotationIntensity={0.2} floatIntensity={0.9}>
-        <group position={[3.4, -1.5, 1.3]} scale={0.45}>
+        <group position={[3.6, -1.7, 1.3]} scale={0.45}>
           <FittedModel map={mapS} names={['Spaceship_RaeTheRedPanda']} radius={0.5} yaw={2.2} />
         </group>
       </Float>
-      <Sparkles count={26} scale={[6, 6, 3]} size={2.4} speed={0.35} color="#ffd166" opacity={0.7} />
+      <Sparkles count={26} scale={[7, 5, 3]} size={2.4} speed={0.5} color="#c084fc" opacity={0.75} />
     </group>
   )
 }
@@ -762,22 +817,14 @@ function Crystal({ cfg, index }) {
   )
 }
 
-/* milky way backdrop + distant sun */
+/* milky way backdrop (the only sun lives at the prologue — no duplicate suns) */
 function Backdrop() {
   const stars = loadTex('/textures/2k_stars_milky_way.jpg')
-  const sun = loadTex('/textures/2k_sun.jpg')
   return (
-    <>
-      <mesh scale={[-1, 1, 1]}>
-        <sphereGeometry args={[140, 32, 32]} />
-        <meshBasicMaterial map={stars} opacity={0.35} transparent depthWrite={false} fog={false} />
-      </mesh>
-      <mesh position={[15, 9, -150]}>
-        <sphereGeometry args={[3.4, 32, 32]} />
-        <meshBasicMaterial map={sun} toneMapped={false} fog={false} />
-      </mesh>
-      <pointLight position={[15, 9, -148]} intensity={520} distance={220} decay={1.6} color="#ffd9a0" />
-    </>
+    <mesh scale={[-1, 1, 1]}>
+      <sphereGeometry args={[140, 32, 32]} />
+      <meshBasicMaterial map={stars} opacity={0.35} transparent depthWrite={false} fog={false} />
+    </mesh>
   )
 }
 
@@ -905,7 +952,7 @@ export default function SolarStory() {
           <Plate j={5} pos={[-4.9, 2.85, -76]} num="CH·05" title="THE LOG" sub="2023 → 2027" />
 
           {/* FINAL gate — mission control */}
-          <FinalGate pos={[4.8, 0.35, -94]} />
+          <BlackHole pos={[4.8, 0.35, -94]} />
           <Plate j={6} pos={[4.8, 2.6, -94]} num="FINAL" title="MISSION CONTROL" sub="open a transmission" />
 
           {/* the traveler */}
