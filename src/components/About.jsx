@@ -17,7 +17,7 @@ export default function About() {
           viewport={{ once: true, margin: '-80px' }}
           variants={stagger}
         >
-          <motion.span className="sec-label" variants={fadeUp}>about me</motion.span>
+          <motion.span className="sec-label" variants={fadeUp}>chapter 01 · origin</motion.span>
           <motion.h2 className="sec-title" variants={fadeUp}>
             {about.heading}
           </motion.h2>

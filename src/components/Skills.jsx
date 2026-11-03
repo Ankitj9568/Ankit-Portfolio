@@ -16,7 +16,7 @@ export default function Skills() {
           viewport={{ once: true, margin: '-80px' }}
           variants={{ hidden: {}, show: { transition: { staggerChildren: 0.08 } } }}
         >
-          <motion.span className="sec-label" variants={fadeUp()}>skills</motion.span>
+          <motion.span className="sec-label" variants={fadeUp()}>chapter 02 · the arsenal</motion.span>
           <motion.h2 className="sec-title" variants={fadeUp()}>
             My <span className="gradient-text">Tech Arsenal</span>
           </motion.h2>

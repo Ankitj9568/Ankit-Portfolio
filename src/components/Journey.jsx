@@ -18,7 +18,7 @@ export default function Journey() {
           variants={stagger}
           style={{ textAlign: 'center', marginBottom: 60 }}
         >
-          <motion.span className="sec-label" variants={fadeUp}>journey</motion.span>
+          <motion.span className="sec-label" variants={fadeUp}>chapter 05 · the log</motion.span>
           <motion.h2 className="sec-title" variants={fadeUp}>
             The <span className="gradient-text">Mission Log</span>
           </motion.h2>

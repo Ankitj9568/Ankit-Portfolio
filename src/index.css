@@ -707,3 +707,139 @@ button { font-family: inherit; }
   .about-stats { grid-template-columns: repeat(2, 1fr); }
   .scroll-hint { display: none; }
 }
+
+/* ---------- STORY MODE (solar-system journey) ---------- */
+.story-canvas {
+  position: fixed; inset: 0; z-index: 1;
+  opacity: 1;
+  transition: opacity 0.55s ease;
+}
+/* while the 3D playground section owns the screen, dim the story layer */
+body.story-veiled .story-canvas { opacity: 0.08; }
+
+#scroll-flow {
+  position: relative; z-index: 2;
+  /* letters float above space; interactive 3D receives events in the gaps */
+  pointer-events: none;
+}
+#scroll-flow a,
+#scroll-flow button,
+#scroll-flow input,
+#scroll-flow textarea,
+#scroll-flow select,
+#scroll-flow label,
+#scroll-flow .glass,
+#scroll-flow .marquee,
+#scroll-flow .lab-stage {
+  pointer-events: auto;
+}
+
+/* one tall act per chapter
+/* ===== STORY MODE (solar-system journey) ===== */
+.story-canvas {
+  position: fixed; inset: 0; z-index: 1;
+  opacity: 1;
+  transition: opacity 0.55s ease;
+}
+/* while the 3D playground section owns the screen, dim the story layer */
+body.story-veiled .story-canvas { opacity: 0.08; }
+
+#scroll-flow {
+  position: relative; z-index: 2;
+  /* letters float above space; interactive 3D receives events in the gaps */
+  pointer-events: none;
+}
+#scroll-flow a,
+#scroll-flow button,
+#scroll-flow input,
+#scroll-flow textarea,
+#scroll-flow select,
+#scroll-flow label,
+#scroll-flow .glass,
+#scroll-flow .marquee,
+#scroll-flow .lab-stage {
+  pointer-events: auto;
+}
+
+/* one tall act per chapter: room for the camera to settle on each planet */
+.chapter { min-height: 185vh; }
+.chapter:first-child { min-height: 0; }
+
+/* on wide screens, content docks opposite its planet */
+@media (min-width: 961px) {
+  .chapter.side-left  .container,
+  .chapter.side-right .container { width: min(660px, 94%); }
+  .chapter.side-right .container { margin-right: 5%; }
+  .chapter.side-left  .container { margin-left: 5%; }
+  .chapter.side-left  .skills-grid,
+  .chapter.side-right .skills-grid { grid-template-columns: repeat(2, 1fr); }
+  .chapter.side-left  .about-grid,
+  .chapter.side-right .about-grid { grid-template-columns: 1fr; }
+  .chapter.side-left  .about-stats,
+  .chapter.side-right .about-stats { grid-template-columns: repeat(3, 1fr); }
+}
+
+/* HTML plaques anchored in 3D space */
+.planet-plate {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  font-family: var(--font-mono);
+  background: rgba(8, 9, 22, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 12px;
+  padding: 8px 15px;
+  backdrop-filter: blur(6px);
+  white-space: nowrap;
+  text-align: center;
+}
+.planet-plate .pp-num {
+  font-size: 0.58rem; letter-spacing: 0.3em;
+  color: #79e8ff;
+}
+.planet-plate b { font-size: 0.72rem; letter-spacing: 0.18em; color: #eaf3ff; }
+.planet-plate i { font-style: normal; font-size: 0.56rem; letter-spacing: 0.14em; color: rgba(214, 225, 245, 0.62); }
+
+/* project rings orbiting Saturn */
+.ring-label {
+  font-family: var(--font-mono);
+  font-size: 0.62rem; letter-spacing: 0.16em;
+  color: var(--c);
+  background: rgba(6, 7, 18, 0.62);
+  border: 1px solid color-mix(in srgb, var(--c) 55%, transparent);
+  border-radius: 999px;
+  padding: 4px 11px;
+  white-space: nowrap;
+  transition: box-shadow 0.25s ease, border-color 0.25s ease;
+}
+.ring-label.hot {
+  box-shadow: 0 0 14px color-mix(in srgb, var(--c) 60%, transparent);
+  border-color: var(--c);
+}
+.ring-callout {
+  width: 218px;
+  background: rgba(7, 8, 20, 0.9);
+  border: 1px solid color-mix(in srgb, var(--c) 45%, transparent);
+  border-left: 3px solid var(--c);
+  border-radius: 12px;
+  padding: 12px 14px;
+  backdrop-filter: blur(8px);
+  font-family: var(--font-sans);
+  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.5);
+}
+.ring-callout b { display: block; font-size: 0.9rem; color: #eef4ff; margin-bottom: 6px; }
+.ring-callout p { font-size: 0.74rem; line-height: 1.5; color: rgba(214, 225, 245, 0.75); margin: 0 0 9px; }
+.ring-links { display: flex; gap: 8px; }
+.ring-links a {
+  font-family: var(--font-mono);
+  font-size: 0.62rem; letter-spacing: 0.08em;
+  color: var(--c);
+  border: 1px solid color-mix(in srgb, var(--c) 45%, transparent);
+  border-radius: 8px;
+  padding: 4px 9px;
+  text-decoration: none;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+.ring-links a:hover { background: var(--c); color: #05060f; }
+
+@media (hover: none) {
+  .ring-label { font-size: 0.74rem; }
+}

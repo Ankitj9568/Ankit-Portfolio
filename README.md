@@ -1,6 +1,8 @@
 # Ankit Kumar Jha — Portfolio 🚀
 
-A dark-futuristic, neon-glass portfolio with an **interactive 3D space scene** — a real textured rocket flying a ringed Quaternius planet, collectible crystals, hyperdrive warp-streaks, bloom post-processing, a draggable 3D Model Lab, and custom cursor UX.
+A dark-futuristic, neon-glass portfolio built as a **scrollytelling solar-system journey** — scroll to fly through space planet-by-planet: Earth is your origin, Mars the tech arsenal, **Saturn's glowing rings are the projects** (hover a ring for its story, click for links), Jupiter the hackathon glory, Neptune the mission log, and a floating station ends the trip at Mission Control.
+
+Featuring photoreal NASA-based planet textures, real GLB spacecraft/rover/astronaut/station models, atmosphere rim-glow, warp-drive speed streaks, collectible crystals, a dedicated 3D Model Lab, and custom cursor UX.
 
 Built with **React + Three.js (React Three Fiber)** and **Framer Motion**.
 
@@ -25,18 +27,24 @@ npm run preview  # preview the production build
 
 | Feature | Interaction |
 |---|---|
-| 3D rocket (GLB) | Flies a loop toward the ringed planet — **hover to enlarge, click for warp boost** |
-| Planet | Real low-poly GLB + procedural Saturn rings + orbiting dust |
-| Asteroid belt | 11 tumbling GLB rocks orbiting the planet |
+| The Story | **Scroll = travel**: camera hops planet to planet as you pass each chapter |
+| Saturn's rings | Each glowing orbit arc = one project — **hover to highlight, click for description + Live/GitHub links** |
+| 3D rocket (GLB) | Flies an interplanetary highway through all chapters — **hover to enlarge, click for warp boost** |
+| Realistic planets | Earth (with orbiting Moon), Mars, Saturn, Jupiter, Neptune — photoreal texture maps + fresnel **atmosphere rims** |
+| Chapter plaques | HTML labels anchored in 3D above each planet |
+| Quaternius cameos | Astronaut near Earth, rover by Mars, space-station finale at Mission Control |
 | Collectible crystals | **Hover to glow, click to collect** (counter chip in hero!) |
-| Hyperdrive streaks | 400 instanced light trails — **warp on rocket click or double-click** |
-| Full scene | **Drag to orbit, scroll to zoom** (desktop), gentle auto-rotate |
+| Hyperdrive streaks | Instanced light trails that follow the camera — **warp on rocket click** |
 | 3D Model Lab | Switch between Rocket / Wing Ship / Astronaut / Rover / Planet — drag, zoom, wireframe toggle |
-| Post-processing | Bloom glow on all emissive elements |
+| Post-processing | Bloom glow + vignette grading |
 
 ## 3D models
 
 All GLB models are from [Quaternius](https://quaternius.com)' *Ultimate Space Kit* (CC0 — free for commercial use, no attribution required) in `public/models/`.
+
+## Planet textures
+
+Planetary texture maps in `public/textures/` are from [Solar System Scope](https://www.solarsystemscope.com/textures/) (CC BY 4.0) — Earth, Mars, Jupiter, Saturn + ring alpha, Neptune, Moon, Sun and the Milky Way backdrop. Modified: none.
 
 ## Model inspection scripts
 

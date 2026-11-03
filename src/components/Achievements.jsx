@@ -18,7 +18,7 @@ export default function Achievements() {
           viewport={{ once: true, margin: '-80px' }}
           variants={{ hidden: {}, show: { transition: { staggerChildren: 0.08 } } }}
         >
-          <motion.span className="sec-label" variants={fadeUp}>achievements</motion.span>
+          <motion.span className="sec-label" variants={fadeUp}>chapter 04 · storm glory</motion.span>
           <motion.h2 className="sec-title" variants={fadeUp}>
             Proof of <span className="gradient-text">Grind</span>
           </motion.h2>

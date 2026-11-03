@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import HeroScene from './three/HeroScene'
 import { profile } from '../data'
 import { ArrowIcon, GithubIcon, LinkedinIcon, MailIcon, RocketIcon } from './Icons'
 
@@ -62,8 +61,6 @@ export default function Hero() {
 
   return (
     <section id="home" className="hero">
-      <HeroScene />
-
       <motion.div
         className="container hero-content"
         variants={container}
@@ -121,7 +118,7 @@ export default function Hero() {
       </motion.div>
 
       <div className="orbit-hint" aria-hidden="true">
-        ⟳ drag to orbit · scroll to zoom · <b>double-click = warp</b>
+        ⬆ scroll = travel the system · <b>click the rocket = warp</b> · ✦ collect crystals
       </div>
 
       <div className="scroll-hint">

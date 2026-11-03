@@ -69,7 +69,7 @@ export default function Projects() {
           viewport={{ once: true, margin: '-80px' }}
           variants={stagger}
         >
-          <motion.span className="sec-label" variants={fadeUp}>projects</motion.span>
+          <motion.span className="sec-label" variants={fadeUp}>chapter 03 · mission deck</motion.span>
           <motion.h2 className="sec-title" variants={fadeUp}>
             Things I've <span className="gradient-text">Built & Shipped</span>
           </motion.h2>

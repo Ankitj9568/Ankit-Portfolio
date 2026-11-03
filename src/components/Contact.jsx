@@ -18,7 +18,7 @@ export default function Contact() {
           viewport={{ once: true, margin: '-80px' }}
           variants={stagger}
         >
-          <motion.span className="sec-label" variants={fadeUp}>contact</motion.span>
+          <motion.span className="sec-label" variants={fadeUp}>final transmission</motion.span>
           <motion.h2 className="sec-title" variants={fadeUp}>
             Let's Build Something <span className="gradient-text">Out of This World</span>
           </motion.h2>
