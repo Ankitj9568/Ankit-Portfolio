@@ -73,6 +73,8 @@ function Atmosphere({ radius = 1, color = '#6ab7ff', scale = 1.055, power = 3, s
 export const warp = { boost: 0 }
 /* warp drive telemetry read by the DOM cockpit (no React re-renders) */
 export const warpFx = { cover: 0, phase: 0, vel: 99.3 }
+/* travel intensity: spikes while scrolling between chapters, coasts back to slow lines */
+export const travelFx = { boost: 0 }
 const emitHover = (on) =>
   window.dispatchEvent(new Event(on ? 'akj-cursor-hover' : 'akj-cursor-blur'))
 
@@ -105,15 +107,25 @@ function Rig() {
   const { camera } = useThree()
   const posRef = useRef(new THREE.Vector3(1, 0.5, 11))
   const tgtRef = useRef(new THREE.Vector3(-6.2, 0.35, 2.5))
+  const prevPos = useRef(0)
   const p = useMemo(() => new THREE.Vector3(), [])
   const t = useMemo(() => new THREE.Vector3(), [])
 
   useFrame(({ clock }, dt) => {
     warp.boost = Math.max(0, warp.boost - dt * 0.5)
     const { phase, cover } = warpState()
+
+    // scroll travel feeds the drive: fast chapter-to-chapter jumps blaze the
+    // streaks, then boost decays so each chapter settles into slow drift lines
+    const pr = getProgress()
+    const storyPos = pr.i + pr.t
+    const dStory = Math.abs(storyPos - prevPos.current)
+    prevPos.current = storyPos
+    travelFx.boost = clamp01(Math.max(travelFx.boost - dt * 1.3, Math.min(1, dStory * 26)))
+
     warpFx.cover = cover
     warpFx.phase = phase
-    warpFx.vel = 99.3 + phase * 913
+    warpFx.vel = 99.3 + phase * 913 + travelFx.boost * 120
 
     const { i } = getProgress()
     const A = CHAPTERS[Math.min(i, CHAPTERS.length - 1)]
@@ -144,8 +156,8 @@ function Rig() {
       camera.position.y += Math.cos(tt * 47) * amp * 0.7
     }
     camera.lookAt(tgtRef.current)
-    // FOV kick: the stretch of space itself mid-warp
-    const fov = 55 + Math.sin(phase * Math.PI) * 9
+    // FOV kick: the stretch of space itself mid-warp (and a light push while traveling)
+    const fov = 55 + Math.sin(phase * Math.PI) * 9 + travelFx.boost * 5
     if (Math.abs(camera.fov - fov) > 0.01) {
       camera.fov = fov
       camera.updateProjectionMatrix()
@@ -476,15 +488,16 @@ function HyperDrive({ color, opacity = 0.5 }) {
   )
   useFrame((_, dt) => {
     const { phase, cover } = warpState()
+    const drive = Math.max(phase, travelFx.boost)
     const conv = 1 - cover * 0.62 // streaks funnel into the tunnel
     const mat = ref.current.material
-    mat.opacity = opacity + phase * 0.45
+    mat.opacity = opacity + drive * 0.45
     ref.current.position.copy(camera.position)
     streaks.forEach((s, i) => {
-      s.z -= s.v * dt * (1 + phase * 11)
+      s.z -= s.v * dt * (1 + drive * 11)
       if (s.z < -6) { s.z = 6 }
       dummy.position.set(s.x * conv, s.y * conv, s.z)
-      dummy.scale.set(0.012, 0.012, s.len * (0.32 + phase * 2.6))
+      dummy.scale.set(0.012, 0.012, s.len * (0.32 + drive * 2.6))
       dummy.updateMatrix()
       ref.current.setMatrixAt(i, dummy.matrix)
     })
