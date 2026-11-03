@@ -123,17 +123,46 @@ function Rig() {
   return null
 }
 
+/* camera-distance cull: fully-fogged meshes still occlude stars (black discs) — hide beyond fog far */
+const cullV = new THREE.Vector3()
+function useCull(ref, maxDist = 44) {
+  useFrame(({ camera }) => {
+    if (!ref.current) return
+    ref.current.getWorldPosition(cullV)
+    ref.current.visible = camera.position.distanceTo(cullV) < maxDist
+  })
+}
+
 /* ── realistic textured planet (with optional atmosphere halo) ── */
-function Planet({ url, pos, radius = 1.6, spin = 0.05, tilt = 0, atmo = null }) {
-  const ref = useRef()
+function Planet({ url, pos, radius = 1.6, spin = 0.05, tilt = 0, atmo = null, clouds = null }) {
+  const grp = useRef()
+  const cRef = useRef()
   const texture = loadTex(url)
-  useFrame((_, dt) => { ref.current.rotation.y += dt * spin })
+  const cloudTex = clouds ? loadTex(clouds) : null
+  useCull(grp)
+  useFrame((_, dt) => {
+    grp.current.children[0].rotation.y += dt * spin
+    if (cRef.current) cRef.current.rotation.y += dt * spin * 1.35
+  })
   return (
-    <group position={pos} rotation={[0, tilt, 0]}>
-      <mesh ref={ref}>
+    <group ref={grp} position={pos} rotation={[0, tilt, 0]}>
+      <mesh>
         <sphereGeometry args={[radius, 56, 56]} />
         <meshStandardMaterial map={texture} roughness={0.9} metalness={0} />
       </mesh>
+      {cloudTex && (
+        <mesh ref={cRef}>
+          <sphereGeometry args={[radius * 1.013, 48, 48]} />
+          <meshStandardMaterial
+            color="#ffffff"
+            alphaMap={cloudTex}
+            transparent
+            opacity={0.85}
+            depthWrite={false}
+            roughness={1}
+          />
+        </mesh>
+      )}
       {atmo && <Atmosphere radius={radius} color={atmo} />}
     </group>
   )
@@ -141,9 +170,15 @@ function Planet({ url, pos, radius = 1.6, spin = 0.05, tilt = 0, atmo = null }) 
 
 function Moon({ center }) {
   const ref = useRef()
+  useCull(ref, 40)
   useFrame(({ clock }) => {
     const a = clock.elapsedTime * 0.35
-    ref.current.position.set(center[0] + Math.cos(a) * 2.9, center[1] + 0.3, center[2] + Math.sin(a) * 2.9)
+    // orbit stays behind the planet, so it never drifts in front of your text
+    ref.current.position.set(
+      center[0] + Math.cos(a) * 2.8,
+      center[1] + 0.45 + Math.sin(a) * 0.25,
+      center[2] - Math.abs(Math.sin(a)) * 3.2 - 0.35,
+    )
     ref.current.rotation.y += 0.002
   })
   const texture = loadTex('/textures/2k_moon.jpg')
@@ -173,9 +208,11 @@ function radialRingGeometry(inner, outer, segs = 160) {
 const RING_TILT = [-Math.PI / 2.35, 0, 0.18]
 
 function Saturn({ pos }) {
+  const grp = useRef()
+  useCull(grp)
   const texture = loadTex('/textures/2k_saturn_ring_alpha.png')
   return (
-    <group position={pos} rotation={[0, -0.5, 0]}>
+    <group ref={grp} position={pos} rotation={[0, -0.5, 0]}>
       {/* body */}
       <PlanetSpin radius={1.55} />
       <Atmosphere radius={1.55} color="#ffe3b0" power={3.4} strength={0.8} />
@@ -435,25 +472,25 @@ function Plate({ j, pos, num, title, sub }) {
   )
 }
 
-/* ── quaternius cameos: the two ships of the kit ── */
+/* ── quaternius cameos: one ship per stop, readable and glowing ── */
 function EarthCameos() {
-  const mapR = useFamilyModel('/models/rock.glb')
   const mapS = useFamilyModel('/models/spaceship.glb')
+  const grp = useRef()
+  useCull(grp)
   return (
-    <>
-      {/* Fernando the Flamingo wing-ship parked in low Earth orbit */}
-      <Float speed={1.8} rotationIntensity={0.22} floatIntensity={1.5}>
-        <group position={[-2.6, -1.5, 1.9]} scale={0.7}>
-          <FittedModel map={mapS} names={['Spaceship_FernandoTheFlamingo']} radius={1.15} yaw={2.05 - Math.PI / 2} pitch={0.08} />
+    <group ref={grp}>
+      {/* Fernando the Flamingo wing-ship parked in low Earth orbit, engines warm */}
+      <Float speed={1.8} rotationIntensity={0.2} floatIntensity={1.4}>
+        <group position={[-1.7, -1.15, 3.1]} scale={0.95}>
+          <FittedModel map={mapS} names={['Spaceship_FernandoTheFlamingo']} radius={1.35} yaw={2.05 - Math.PI / 2} pitch={0.08} />
+          <mesh position={[0.15, 0.1, 0.5]}>
+            <sphereGeometry args={[0.07, 12, 12]} />
+            <meshBasicMaterial color="#7ff3ff" toneMapped={false} />
+          </mesh>
+          <pointLight position={[0.15, 0.1, 0.65]} intensity={6} distance={2.6} color="#67e8f9" />
         </group>
       </Float>
-      <Float speed={1.2} rotationIntensity={1.2} floatIntensity={1.2}>
-        <group position={[-6.6, -1.4, 2.4]}>
-          <FittedModel map={mapR} names={['Rock_2']} radius={0.5} />
-          <FittedModel map={mapR} names={['Rock_3']} radius={0.3} />
-        </group>
-      </Float>
-    </>
+    </group>
   )
 }
 
@@ -461,7 +498,9 @@ function EarthCameos() {
 const patrolAhead = new THREE.Vector3()
 function MarsPatrol() {
   const map = useFamilyModel('/models/spaceship.glb')
+  const outer = useRef()
   const g = useRef()
+  useCull(outer)
   useFrame(({ clock }) => {
     const a = clock.elapsedTime * 0.45
     g.current.position.set(
@@ -478,8 +517,11 @@ function MarsPatrol() {
     g.current.lookAt(patrolAhead)
   })
   return (
-    <group ref={g} scale={0.62}>
-      <FittedModel map={map} names={['Spaceship_FernandoTheFlamingo']} radius={1} yaw={-Math.PI / 2} />
+    <group ref={outer}>
+      <group ref={g} scale={0.62}>
+        <FittedModel map={map} names={['Spaceship_FernandoTheFlamingo']} radius={1} yaw={-Math.PI / 2} />
+        <pointLight position={[0, 0, 0.55]} intensity={5} distance={2.4} color="#22d3ee" />
+      </group>
     </group>
   )
 }
@@ -488,12 +530,14 @@ function MarsPatrol() {
 function FinalGate({ pos }) {
   const mapS = useFamilyModel('/models/spaceship.glb')
   const gate = useRef()
+  const wrap = useRef()
+  useCull(wrap)
   useFrame(({ clock }, dt) => {
     gate.current.rotation.z += dt * 0.55
     gate.current.rotation.x = Math.sin(clock.elapsedTime * 0.4) * 0.28
   })
   return (
-    <group position={pos}>
+    <group ref={wrap} position={pos}>
       <group ref={gate} rotation={[0, 0.5, 0]}>
         <mesh>
           <torusGeometry args={[1.7, 0.075, 12, 96]} />
@@ -538,15 +582,17 @@ function Crystal({ cfg, index }) {
   const ref = useRef()
   const [hov, setHov] = useState(false)
   const st = useRef({ collected: false, until: 0, s: 1, now: 0 })
-  useFrame(({ clock }, dt) => {
+  const cullV = useRef(new THREE.Vector3())
+  useFrame(({ clock, camera }, dt) => {
     const s = st.current
     s.now = clock.elapsedTime
     if (s.collected && s.now > s.until) s.collected = false
     const target = s.collected ? 0.0001 : hov ? 1.25 : 1
     s.s += (target - s.s) * Math.min(dt * 5, 1)
     ref.current.scale.setScalar(s.s)
-    ref.current.visible = s.s > 0.015
     ref.current.position.set(cfg.pos[0], cfg.pos[1] + Math.sin(s.now * 1.3 + index) * 0.25, cfg.pos[2])
+    cullV.current.setFromMatrixPosition(ref.current.matrixWorld)
+    ref.current.visible = s.s > 0.015 && camera.position.distanceTo(cullV.current) < 42
     ref.current.rotation.y += dt * 1.4
   })
   const click = (e) => {
@@ -614,8 +660,8 @@ export default function SolarStory() {
           <Backdrop />
           <Stars radius={90} depth={40} count={2600} factor={3.6} saturation={0} fade speed={0.4} />
 
-          {/* CH·01 Earth — origin */}
-          <Planet url="/textures/2k_earth_daymap.jpg" pos={[-4.6, 0.3, 0]} radius={1.6} atmo="#4d9fff" />
+          {/* CH·01 Earth — origin (day map + real cloud layer) */}
+          <Planet url="/textures/2k_earth_daymap.jpg" clouds="/textures/2k_earth_clouds.jpg" pos={[-4.6, 0.3, 0]} radius={1.6} atmo="#4d9fff" />
           <Moon center={[-4.6, 0.3, 0]} />
           <Plate j={1} pos={[-4.6, 3.05, 0]} num="CH·01" title="THE HOME PLANET" sub="Kolkata · B.Tech IT · TMSL" />
           <EarthCameos />
@@ -664,4 +710,4 @@ export default function SolarStory() {
   )
 }
 
-preloadFamilies(['/models/spaceship.glb', '/models/rock.glb', '/models/pickup.glb'])
+preloadFamilies(['/models/spaceship.glb', '/models/pickup.glb'])

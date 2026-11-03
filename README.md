@@ -30,9 +30,10 @@ npm run preview  # preview the production build
 | The Story | **Scroll = travel**: camera hops planet to planet as you pass each chapter |
 | Saturn's rings | Each glowing orbit arc = one project — **hover to highlight, click for description + Live/GitHub links** |
 | 3D rocket (GLB) | Flies an interplanetary highway through all chapters — **hover to enlarge, click for warp boost** |
-| Realistic planets | Earth (with orbiting Moon), Mars, Saturn, Jupiter, Neptune — photoreal texture maps + fresnel **atmosphere rims** |
-| Chapter plaques | HTML labels anchored in 3D above each planet |
-| Quaternius cameos | Astronaut near Earth, rover by Mars, space-station finale at Mission Control |
+| Realistic planets | Earth (day map + real cloud layer + orbiting Moon), Mars, Saturn, Jupiter, Neptune — photoreal texture maps + fresnel **atmosphere rims** |
+| Chapter plaques | HTML labels anchored in 3D above each planet, gated to chapter proximity |
+| Ship cameos | Quaternius ships only: a wing-ship parked at Earth, a second one patrolling Mars, both at the finale |
+| Finale | Rotating neon **warp-gate beacon** with the fleet at final approach |
 | Collectible crystals | **Hover to glow, click to collect** (counter chip in hero!) |
 | Hyperdrive streaks | Instanced light trails that follow the camera — **warp on rocket click** |
 | 3D Model Lab | Switch between Rocket / Wing Ship / Astronaut / Rover / Planet — drag, zoom, wireframe toggle |
