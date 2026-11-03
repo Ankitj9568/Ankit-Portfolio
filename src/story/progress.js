@@ -8,8 +8,8 @@
 const store = {
   els: [],
   anchors: [],
-  /** { index, t, veilLab } — index of current segment start, t in [0,1) */
-  seg: { i: 0, t: 0, veilLab: false },
+  /** { index, t } — index of current segment start, t in [0,1) */
+  seg: { i: 0, t: 0 },
 }
 
 export function registerChapters(els) {
@@ -29,17 +29,6 @@ export function recalc() {
 
 function onScroll() {
   const scroll = window.scrollY
-  const vh = window.innerHeight
-
-  // lab veil: while the lab section covers the viewport, dim the story canvas
-  let veil = false
-  store.els.forEach((el) => {
-    if (el.dataset.veil === 'lab') {
-      const r = el.getBoundingClientRect()
-      if (r.top < vh * 0.75 && r.bottom > vh * 0.25) veil = true
-    }
-  })
-  store.seg.veilLab = veil
 
   const a = store.anchors
   if (a.length < 2) return
@@ -63,7 +52,7 @@ export function initProgress() {
   return () => window.removeEventListener('scroll', onScroll)
 }
 
-/** read the current segment: { i, t, veilLab } */
+/** read the current segment: { i, t } */
 export const getProgress = () => store.seg
 
 /** smootherstep easing for cinematic interpolation */

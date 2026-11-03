@@ -78,14 +78,13 @@ const emitHover = (on) =>
    planets alternate screen-side: index odd → planet on the LEFT? no —
    here `side` refers to where the planet sits: 'left' | 'right'            */
 const CHAPTERS = [
-  { id: 'home', pos: [0, 0.4, 10], tgt: [0, 0.4, 4] },          // prologue: deep space
-  { id: 'about', planet: [(-4.6), 0.3, 0], side: 'left' },      // Earth
-  { id: 'skills', planet: [5.0, 0.9, -16], side: 'right' },     // Mars
-  { id: 'projects', planet: [(-5.4), 0.5, -34], side: 'left' }, // Saturn (rings = projects)
-  { id: 'lab', pos: [0.4, 0.7, -45], tgt: [0, 0.5, -52] },      // travel stretch
+  { id: 'home', pos: [0, 0.4, 10], tgt: [0, 0.4, 4] },             // prologue: deep space
+  { id: 'about', planet: [(-4.6), 0.3, 0], side: 'left' },         // Earth
+  { id: 'skills', planet: [5.0, 0.9, -16], side: 'right' },        // Mars
+  { id: 'projects', planet: [(-5.4), 0.5, -34], side: 'left' },    // Saturn (rings = projects)
   { id: 'achievements', planet: [5.6, -0.4, -56], side: 'right' }, // Jupiter
-  { id: 'journey', planet: [(-4.9), 0.7, -76], side: 'left' },  // Neptune
-  { id: 'contact', planet: [4.8, 0.35, -94], side: 'right' },   // Station
+  { id: 'journey', planet: [(-4.9), 0.7, -76], side: 'left' },     // Neptune
+  { id: 'contact', planet: [4.8, 0.35, -94], side: 'right' },      // Station
 ]
 
 function Rig() {
@@ -97,9 +96,6 @@ function Rig() {
 
   useFrame((_, dt) => {
     warp.boost = Math.max(0, warp.boost - dt * 0.5)
-
-    // reflect lab veil on <body> for a CSS fade of the story canvas
-    document.body.classList.toggle('story-veiled', getProgress().veilLab)
 
     const { i } = getProgress()
     const A = CHAPTERS[Math.min(i, CHAPTERS.length - 1)]
@@ -413,15 +409,16 @@ function Plate({ pos, num, title, sub }) {
   )
 }
 
-/* ── quaternius cameos ──────────────────────── */
+/* ── quaternius cameos: the two ships of the kit ── */
 function EarthCameos() {
-  const mapA = useFamilyModel('/models/astronaut_barbarathebee.glb')
   const mapR = useFamilyModel('/models/rock.glb')
+  const mapS = useFamilyModel('/models/spaceship.glb')
   return (
     <>
-      <Float speed={2.2} rotationIntensity={0.5} floatIntensity={1.6}>
-        <group position={[-2.9, 2.15, 1.2]} scale={0.75}>
-          <FittedModel map={mapA} names={['BarbaraTheBee', 'Pistol']} radius={1.05} yaw={0.35} />
+      {/* Fernando the Flamingo wing-ship parked in low Earth orbit */}
+      <Float speed={1.8} rotationIntensity={0.22} floatIntensity={1.5}>
+        <group position={[-2.6, -1.5, 1.9]} scale={0.7}>
+          <FittedModel map={mapS} names={['Spaceship_FernandoTheFlamingo']} radius={1.15} yaw={2.05 - Math.PI / 2} pitch={0.08} />
         </group>
       </Float>
       <Float speed={1.2} rotationIntensity={1.2} floatIntensity={1.2}>
@@ -434,19 +431,30 @@ function EarthCameos() {
   )
 }
 
-function MarsRover() {
-  const map = useFamilyModel('/models/rover.glb')
+/* second Fernando wing-ship on patrol around Mars */
+const patrolAhead = new THREE.Vector3()
+function MarsPatrol() {
+  const map = useFamilyModel('/models/spaceship.glb')
+  const g = useRef()
+  useFrame(({ clock }) => {
+    const a = clock.elapsedTime * 0.45
+    g.current.position.set(
+      5.0 + Math.cos(a) * 3.1,
+      0.9 + Math.sin(a * 1.3) * 0.5,
+      -16 + Math.sin(a) * 3.1,
+    )
+    const b = a + 0.4
+    patrolAhead.set(
+      5.0 + Math.cos(b) * 3.1,
+      0.9 + Math.sin(b * 1.3) * 0.5,
+      -16 + Math.sin(b) * 3.1,
+    )
+    g.current.lookAt(patrolAhead)
+  })
   return (
-    <Float speed={1.6} rotationIntensity={0.35} floatIntensity={1}>
-      <group position={[3.4, -0.75, -14.2]} scale={0.9}>
-        <FittedModel
-          map={map}
-          names={['Rover_2_1', 'Wheel_1_2', 'Wheel_2_2', 'Wheel_3_2', 'Wheel_4_2']}
-          radius={1.05}
-          yaw={-0.6}
-        />
-      </group>
-    </Float>
+    <group ref={g} scale={0.62}>
+      <FittedModel map={map} names={['Spaceship_FernandoTheFlamingo']} radius={1} yaw={-Math.PI / 2} />
+    </group>
   )
 }
 
@@ -566,7 +574,7 @@ export default function SolarStory() {
           {/* CH·02 Mars — the arsenal */}
           <Planet url="/textures/2k_mars.jpg" pos={[5.0, 0.9, -16]} radius={1.35} spin={0.07} atmo="#ff7a55" />
           <Plate pos={[5.0, 2.75, -16]} num="CH·02" title="THE ARSENAL" sub="SQL · PostgreSQL · Node/Express · Java" />
-          <MarsRover />
+          <MarsPatrol />
 
           {/* CH·03 Saturn — rings are projects */}
           <Saturn pos={[-5.4, 0.5, -34]} />
@@ -607,4 +615,4 @@ export default function SolarStory() {
   )
 }
 
-preloadFamilies(['/models/spaceship.glb', '/models/astronaut_barbarathebee.glb', '/models/rover.glb', '/models/rock.glb', '/models/pickup.glb', '/models/base.glb', '/models/connector.glb', '/models/solarpanel.glb'])
+preloadFamilies(['/models/spaceship.glb', '/models/rock.glb', '/models/pickup.glb', '/models/base.glb', '/models/connector.glb', '/models/solarpanel.glb'])

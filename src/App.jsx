@@ -6,7 +6,6 @@ import Hero from './components/Hero'
 import About from './components/About'
 import Skills from './components/Skills'
 import Projects from './components/Projects'
-import Lab from './components/Lab'
 import Achievements from './components/Achievements'
 import Journey from './components/Journey'
 import Contact from './components/Contact'
@@ -54,7 +53,6 @@ export default function App() {
         <Chapter side="right"><About /></Chapter>
         <Chapter side="left"><Skills /></Chapter>
         <Chapter side="right"><Projects /></Chapter>
-        <Chapter veil="lab"><Lab /></Chapter>
         <Chapter side="left"><Achievements /></Chapter>
         <Chapter side="right"><Journey /></Chapter>
         <Chapter side="left"><Contact /></Chapter>
