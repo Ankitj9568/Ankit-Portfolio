@@ -72,7 +72,7 @@ function Atmosphere({ radius = 1, color = '#6ab7ff', scale = 1.055, power = 3, s
 /* warp boost shared with the cursor/chip UX */
 export const warp = { boost: 0 }
 /* warp drive telemetry read by the DOM cockpit (no React re-renders) */
-export const warpFx = { cover: 0, phase: 0, vel: 99.3, crack: 0 }
+export const warpFx = { cover: 0, phase: 0, vel: 99.3, crack: 0, crackGrow: 0 }
 /* travel intensity: spikes while scrolling between chapters, coasts back to slow lines */
 export const travelFx = { boost: 0 }
 const emitHover = (on) =>
@@ -90,17 +90,21 @@ function warpState() {
   return {
     phase, cover,
     crack: smooth01((phase - 0.70) / 0.06) * (1 - smooth01((phase - 0.82) / 0.06)),
+    crackGrow: smooth01((phase - 0.70) / 0.13),
   }
 }
 
 /* inter-chapter transit cinematic, driven by the scroll fraction between two
-   chapters: momentum builds → sudden white flash → a purple space-crack opens
-   inside the white → then it fades out right beside the next planet */
+   chapters: momentum builds → white flash → a purple space-crack opens inside
+   the white, starting as a tiny fissure that GROWS toward you until it swallows
+   the screen → then it fades out right beside the next planet */
 function transitState(tf) {
   const momentum = smooth01(tf / 0.35) * (1 - smooth01((tf - 0.82) / 0.14))
-  const cover = smooth01((tf - 0.40) / 0.12) * (1 - smooth01((tf - 0.78) / 0.14))
-  const crack = smooth01((tf - 0.54) / 0.08) * (1 - smooth01((tf - 0.72) / 0.07))
-  return { momentum, cover, crack }
+  // capped at 0.88 so the blazing hyperdrive lines keep breathing under the white
+  const cover = 0.88 * smooth01((tf - 0.40) / 0.12) * (1 - smooth01((tf - 0.78) / 0.14))
+  const crack = smooth01((tf - 0.54) / 0.08) * (1 - smooth01((tf - 0.74) / 0.08))
+  const crackGrow = smooth01((tf - 0.52) / 0.27)
+  return { momentum, cover, crack, crackGrow }
 }
 
 /* ── the story: one waypoint per chapter ─────────────────
@@ -126,7 +130,7 @@ function Rig() {
 
   useFrame(({ clock }, dt) => {
     warp.boost = Math.max(0, warp.boost - dt * 0.5)
-    const { phase, cover, crack } = warpState()
+    const { phase, cover, crack, crackGrow: wGrow } = warpState()
 
     // scroll travel feeds the drive: fast chapter-to-chapter jumps blaze the
     // streaks, then boost decays so each chapter settles into slow drift lines
@@ -137,12 +141,13 @@ function Rig() {
 
     // scroll-driven transit cinematic between chapters (momentum/crack on top
     // of the raw velocity, so even a slow scroll runs the full staged sequence)
-    const { momentum, cover: tCover, crack: tCrack } = transitState(pr.t)
+    const { momentum, cover: tCover, crack: tCrack, crackGrow: tGrow } = transitState(pr.t)
     travelFx.boost = clamp01(Math.max(travelFx.boost - dt * 1.3, dStory * 26, momentum * 0.85))
 
     warpFx.cover = Math.max(cover, tCover)
     warpFx.phase = phase
     warpFx.crack = Math.max(tCrack, crack)
+    warpFx.crackGrow = Math.max(tGrow, wGrow)
     warpFx.vel = 99.3 + phase * 913 + travelFx.boost * 120
 
     const A = CHAPTERS[Math.min(pr.i, CHAPTERS.length - 1)]
@@ -855,7 +860,14 @@ function CockpitFrame() {
     let raf
     const tick = () => {
       if (flash.current) flash.current.style.opacity = warpFx.cover
-      if (crackRef.current) crackRef.current.style.opacity = Math.min(1, warpFx.crack * 1.8)
+      if (crackRef.current) {
+        const g = warpFx.crackGrow
+        // tiny fissure first, then it accelerates toward you (perspective growth)
+        crackRef.current.style.transform = `scale(${0.07 + Math.pow(g, 1.7) * 3.2})`
+        // and it vanishes into the white as it engulfs the screen
+        crackRef.current.style.opacity =
+          Math.min(1, warpFx.crack * 2.2) * (1 - smooth01((g - 0.72) / 0.28))
+      }
       if (vel.current) vel.current.textContent = warpFx.vel.toFixed(1)
       if (mode.current) mode.current.textContent = warpFx.cover > 0.25 ? 'WARP' : 'CRUISE'
       raf = requestAnimationFrame(tick)
