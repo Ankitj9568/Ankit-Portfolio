@@ -95,15 +95,14 @@ function warpState() {
 }
 
 /* inter-chapter transit cinematic, driven by the scroll fraction between two
-   chapters: momentum builds → white flash → a purple space-crack opens inside
-   the white, starting as a tiny fissure that GROWS toward you until it swallows
-   the screen → then it fades out right beside the next planet */
+   chapters. The drive wakes only AFTER a section is completed: calm while you
+   are still reading, then slow streaks → fast streaks → white flash → the
+   purple crack (tiny fissure growing toward you) → out beside the next planet */
 function transitState(tf) {
-  const momentum = smooth01(tf / 0.35) * (1 - smooth01((tf - 0.82) / 0.14))
-  // capped at 0.88 so the blazing hyperdrive lines keep breathing under the white
-  const cover = 0.88 * smooth01((tf - 0.40) / 0.12) * (1 - smooth01((tf - 0.78) / 0.14))
-  const crack = smooth01((tf - 0.54) / 0.08) * (1 - smooth01((tf - 0.74) / 0.08))
-  const crackGrow = smooth01((tf - 0.52) / 0.27)
+  const momentum = smooth01((tf - 0.50) / 0.16) * (1 - smooth01((tf - 0.95) / 0.05))
+  const cover = 0.88 * smooth01((tf - 0.72) / 0.10) * (1 - smooth01((tf - 0.88) / 0.10))
+  const crack = smooth01((tf - 0.76) / 0.05) * (1 - smooth01((tf - 0.85) / 0.05))
+  const crackGrow = smooth01((tf - 0.75) / 0.13)
   return { momentum, cover, crack, crackGrow }
 }
 
@@ -141,8 +140,11 @@ function Rig() {
 
     // scroll-driven transit cinematic between chapters (momentum/crack on top
     // of the raw velocity, so even a slow scroll runs the full staged sequence)
+    // the drive wakes only once the section is behind you: gate the raw
+    // scroll-velocity blaze so reading/scrolling inside a section stays calm
     const { momentum, cover: tCover, crack: tCrack, crackGrow: tGrow } = transitState(pr.t)
-    travelFx.boost = clamp01(Math.max(travelFx.boost - dt * 1.3, dStory * 26, momentum * 0.85))
+    const gate = smooth01((pr.t - 0.46) / 0.16)
+    travelFx.boost = clamp01(Math.max(travelFx.boost - dt * 1.3, dStory * 26 * gate, momentum * 0.85))
 
     warpFx.cover = Math.max(cover, tCover)
     warpFx.phase = phase
