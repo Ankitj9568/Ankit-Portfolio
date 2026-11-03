@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { sound } from '../story/audio'
 
 /*
  * Boot sequence: the page loads into a cold-start of the ship — engine
@@ -9,9 +10,9 @@ import { useEffect, useState } from 'react'
 const LINES = [
   '' /* placeholder — index 0 starts instantly */,
   '> cold-start · power bus .................. ONLINE',
-  '> engines ............................... IGNITION',
+  '> main engines .......................... IGNITION',
   '> ignition confirmed · thrusters primed',
-  '> trajectory locked · anchoring at Earth',
+  '> trajectory locked · planetary exploration ready',
 ]
 
 export default function BootSequence() {
@@ -20,19 +21,36 @@ export default function BootSequence() {
 
   useEffect(() => {
     const T = [550, 1400, 2400, 3300, 4350, 5400, 6350]
-    const timers = T.map((ms, i) => setTimeout(() => setStep(i + 1), ms))
+    const timers = T.map((ms, i) =>
+      setTimeout(() => {
+        setStep(i + 1)
+        if (i === 1) sound.playThruster(1.5)
+        if (i === 4) sound.playChirp(840)
+      }, ms)
+    )
     const end = setTimeout(() => setGone(true), 7200)
-    return () => { timers.forEach(clearTimeout); clearTimeout(end) }
+    return () => {
+      timers.forEach(clearTimeout)
+      clearTimeout(end)
+    }
   }, [])
 
   if (gone) return null
   const out = step >= 6
 
+  const skip = () => {
+    if (!out) {
+      sound.playThruster(0.8)
+      setStep(6)
+      setTimeout(() => setGone(true), 900)
+    }
+  }
+
   return (
     <div
       className={`boot${out ? ' boot-out' : ''}`}
       aria-hidden="true"
-      onClick={() => out || setStep(6)}
+      onClick={skip}
       role="presentation"
     >
       {/* engine glow rises as ignition progresses */}
@@ -59,6 +77,10 @@ export default function BootSequence() {
 
       {/* ignition flash right before reveal */}
       {step >= 6 && <div className="boot-flash" />}
+
+      <div className="boot-skip-hint">
+        CLICK ANYWHERE TO BYPASS SEQUENCE [ESC / SPACE]
+      </div>
     </div>
   )
 }

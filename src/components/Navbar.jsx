@@ -1,56 +1,53 @@
 import { useEffect, useState } from 'react'
 import { profile } from '../data'
+import { stageStore, CHAPTER_CONFIGS } from '../story/stageStore'
 
 const LINKS = [
-  { label: 'home', href: '#home' },
-  { label: 'about', href: '#about' },
-  { label: 'skills', href: '#skills' },
-  { label: 'projects', href: '#projects' },
-  { label: 'awards', href: '#achievements' },
-  { label: 'journey', href: '#journey' },
-  { label: 'contact', href: '#contact' },
+  { label: 'home', id: 'home' },
+  { label: 'about', id: 'about' },
+  { label: 'skills', id: 'skills' },
+  { label: 'projects', id: 'projects' },
+  { label: 'awards', id: 'achievements' },
+  { label: 'journey', id: 'journey' },
+  { label: 'contact', id: 'contact' },
 ]
 
 export default function Navbar() {
-  const [scrolled, setScrolled] = useState(false)
+  const [activeId, setActiveId] = useState('home')
   const [open, setOpen] = useState(false)
-  const [active, setActive] = useState('#home')
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 24)
-    onScroll()
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
-  }, [])
-
-  /* scroll-spy */
-  useEffect(() => {
-    const obs = new IntersectionObserver(
-      (entries) => entries.forEach((e) => e.isIntersecting && setActive(`#${e.target.id}`)),
-      { rootMargin: '-40% 0px -55% 0px' },
-    )
-    LINKS.forEach(({ href }) => {
-      const el = document.querySelector(href)
-      el && obs.observe(el)
+    const unsub = stageStore.subscribe((st) => {
+      setActiveId(st.chapterConfig.id)
     })
-    return () => obs.disconnect()
+    return () => unsub()
   }, [])
 
-  useEffect(() => {
-    document.body.style.overflow = open ? 'hidden' : ''
-    return () => { document.body.style.overflow = '' }
-  }, [open])
+  const handleNavClick = (e, id) => {
+    e.preventDefault()
+    stageStore.jumpToChapter(id)
+    setOpen(false)
+  }
 
   return (
     <>
-      <header className={`nav ${scrolled ? 'scrolled' : ''}`}>
+      <header className="nav scrolled">
         <div className="nav-inner">
-          <a href="#home" className="nav-logo">
+          <a
+            href="#home"
+            className="nav-logo"
+            onClick={(e) => handleNavClick(e, 'home')}
+          >
             {profile.initials}<span>.</span>
           </a>
           <nav className="nav-links">
-            {LINKS.map(({ label, href }) => (
-              <a key={href} href={href} className={active === href ? 'active' : ''}>
+            {LINKS.map(({ label, id }) => (
+              <a
+                key={id}
+                href={`#${id}`}
+                className={activeId === id ? 'active' : ''}
+                onClick={(e) => handleNavClick(e, id)}
+              >
                 {label}
               </a>
             ))}
@@ -67,8 +64,15 @@ export default function Navbar() {
 
       {open && (
         <div className="mobile-menu" onClick={() => setOpen(false)}>
-          {LINKS.map(({ label, href }) => (
-            <a key={href} href={href}>{label}</a>
+          {LINKS.map(({ label, id }) => (
+            <a
+              key={id}
+              href={`#${id}`}
+              className={activeId === id ? 'active' : ''}
+              onClick={(e) => handleNavClick(e, id)}
+            >
+              {label}
+            </a>
           ))}
         </div>
       )}
